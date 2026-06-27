@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+
+# Python cache
+.pytest_cache/
+.mypy_cache/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Uploads
+uploads/
+
+# Generated reports
+reports/
+
+# Grad-CAM outputs
+outputs/
+
+# Prediction results
+results/
+
+# Model checkpoints
+*.h5
+*.keras
+*.pt
+*.pth
+*.ckpt
+
+# Logs
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# MySQL database dumps
+*.sql
+
+# Temporary files
+*.tmp
+*.bak
+# Dataset
+data/
+*.zip
