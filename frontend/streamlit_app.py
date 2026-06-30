@@ -491,6 +491,8 @@ if st.button(
         )
 
 
+
+
 # ==========================================================
 # Dashboard
 # ==========================================================
@@ -518,6 +520,20 @@ if st.button(
 
         data = response.json()
 
+        # ---------------------------------------
+        # Total Tumor Cases
+        # ---------------------------------------
+
+        tumor_cases = (
+            data["glioma"] +
+            data["meningioma"] +
+            data["pituitary"]
+        )
+
+        # ---------------------------------------
+        # Metrics
+        # ---------------------------------------
+
         col1, col2 = st.columns(2)
 
         with col1:
@@ -529,14 +545,34 @@ if st.button(
 
             st.metric(
                 "Tumor Cases",
-                data["tumor_predictions"]
+                tumor_cases
+            )
+
+            st.metric(
+                "Glioma",
+                data["glioma"]
+            )
+
+            st.metric(
+                "Meningioma",
+                data["meningioma"]
             )
 
         with col2:
 
             st.metric(
                 "No Tumor Cases",
-                data["no_tumor_predictions"]
+                data["notumor"]
+            )
+
+            st.metric(
+                "Pituitary",
+                data["pituitary"]
+            )
+
+            st.metric(
+                "Total Users",
+                data["total_users"]
             )
 
             st.metric(
@@ -544,19 +580,33 @@ if st.button(
                 f"{data['average_confidence']} %"
             )
 
+        # ---------------------------------------
+        # Bar Chart
+        # ---------------------------------------
+
         chart = pd.DataFrame({
 
-            "Category":[
-                "Tumor",
+            "Category": [
+
+                "Glioma",
+                "Meningioma",
+                "Pituitary",
                 "No Tumor"
+
             ],
 
-            "Count":[
-                data["tumor_predictions"],
-                data["no_tumor_predictions"]
+            "Count": [
+
+                data["glioma"],
+                data["meningioma"],
+                data["pituitary"],
+                data["notumor"]
+
             ]
 
         })
+
+        st.subheader("📊 Prediction Distribution")
 
         st.bar_chart(
             chart.set_index("Category")
@@ -567,8 +617,6 @@ if st.button(
         st.error(
             "Unable to load dashboard."
         )
-
-
 # ==========================================================
 # About Project
 # ==========================================================
