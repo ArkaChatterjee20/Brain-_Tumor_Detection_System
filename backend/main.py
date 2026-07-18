@@ -32,6 +32,11 @@ from database.prediction_model import Prediction
 
 from auth.auth import router as auth_router
 from auth.oauth2 import get_current_user
+from database.connection import Base, engine
+from database.user_model import User
+from database.prediction_model import Prediction
+
+
 
 # ----------------------------------------------------
 # Load Environment Variables
@@ -60,7 +65,8 @@ logger = logging.getLogger(__name__)
 # ----------------------------------------------------
 # FastAPI
 # ----------------------------------------------------
-
+# Create database tables
+Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Brain Tumor Detection API",
     version="1.0.0"

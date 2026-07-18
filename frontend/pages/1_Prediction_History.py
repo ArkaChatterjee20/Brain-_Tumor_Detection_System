@@ -1,6 +1,12 @@
 import streamlit as st
 import requests
 from PIL import Image
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8000")
 
 st.title("📜 Prediction History")
 
@@ -21,7 +27,7 @@ headers = {
 
 response = requests.get(
 
-    "http://127.0.0.1:8000/history",
+    f"{BACKEND_URL}/history",
 
     headers=headers
 

@@ -1,0 +1,74 @@
+
+
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: brain_mysql
+    restart: always
+
+    env_file:
+      - .env
+
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+    ports:
+      - "3307:3306"
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  backend:
+
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+
+    container_name: brain_backend
+
+    restart: always
+
+    env_file:
+      - .env
+
+    depends_on:
+      - mysql
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - .:/app
+
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000
+
+  frontend:
+
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+
+    container_name: brain_frontend
+
+    restart: always
+
+    env_file:
+      - .env
+
+    depends_on:
+      - backend
+
+    ports:
+      - "8501:8501"
+
+    volumes:
+      - .:/app
+
+    command: streamlit run frontend/streamlit_app.py --server.port=8501 --server.address=0.0.0.0
+
+volumes:
+  mysql_data:

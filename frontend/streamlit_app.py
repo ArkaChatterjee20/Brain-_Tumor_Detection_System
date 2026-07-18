@@ -3,8 +3,13 @@ import requests
 from PIL import Image
 import pandas as pd
 
-BACKEND_URL = "http://127.0.0.1:8000"
 
+import os
+
+BACKEND_URL = os.getenv(
+    "BACKEND_URL",
+    "http://localhost:8000"
+)
 st.set_page_config(
     page_title="Brain Tumor Detection",
     page_icon="🧠",
@@ -38,44 +43,87 @@ st.title("🧠 Brain Tumor Detection System")
 # Login
 # -----------------------------
 if st.session_state.token is None:
-
-    st.subheader("🔐 User Login")
-
-    email = st.text_input("Email")
-
-    password = st.text_input(
-        "Password",
-        type="password"
+    
+    page = st.radio(
+        "Choose",
+        ["Login", "Register"],
+        horizontal=True
     )
 
-    if st.button("Login"):
+    if page == "Login":
 
-        response = requests.post(
-            f"{BACKEND_URL}/auth/login",
-            json={
-                "email": email,
-                "password": password
-            }
+        st.subheader("🔐 Login")
+
+        email = st.text_input("Email")
+
+        password = st.text_input(
+            "Password",
+            type="password"
         )
 
-        if response.status_code == 200:
+        if st.button("Login"):
 
-            token = response.json()["access_token"]
+            response = requests.post(
+                f"{BACKEND_URL}/auth/login",
+                json={
+                    "email": email,
+                    "password": password
+                }
+            )
 
-            st.session_state.token = token
+            if response.status_code == 200:
 
-            st.success("Login Successful")
+                token = response.json()["access_token"]
 
-            st.code(token)
+                st.session_state.token = token
 
-            st.rerun()
+                st.success("Login Successful")
 
-        else:
+                st.rerun()
 
-            try:
-                st.error(response.json()["detail"])
-            except:
-                st.error(response.text)
+            else:
+
+                try:
+                    st.error(response.json()["detail"])
+                except:
+                    st.error(response.text)
+
+    else:
+
+        st.subheader("📝 Register")
+
+        username = st.text_input("Username")
+
+        email = st.text_input("Email ")
+
+        password = st.text_input(
+            "Password ",
+            type="password"
+        )
+
+        if st.button("Register"):
+
+            response = requests.post(
+                f"{BACKEND_URL}/auth/register",
+                json={
+                    "username": username,
+                    "email": email,
+                    "password": password
+                }
+            )
+
+            if response.status_code == 200:
+
+                st.success(
+                    "Registration Successful. Please Login."
+                )
+
+            else:
+
+                try:
+                    st.error(response.json()["detail"])
+                except:
+                    st.error(response.text)
 
     st.stop()
 

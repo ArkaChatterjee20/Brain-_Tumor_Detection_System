@@ -3,6 +3,7 @@ from fastapi import (
     Depends,
     HTTPException
 )
+import traceback
 
 from sqlalchemy.orm import Session
 
@@ -26,6 +27,7 @@ from auth.hashing import (
 from auth.token import (
     create_access_token
 )
+
 
 router = APIRouter(
     prefix="/auth",
@@ -84,22 +86,22 @@ def register(
 
         return {
 
-            "message":
-            "User registered successfully",
+            "message": "User registered successfully",
 
-            "user_id":
-            new_user.id
+            "user_id": new_user.id
 
         }
 
     except Exception as e:
 
+        print("\n========== REGISTER ERROR ==========")
+        traceback.print_exc()
+        print("Error:", str(e))
+
         raise HTTPException(
             status_code=500,
             detail=str(e)
         )
-
-
 @router.post("/login")
 def login(
     user: UserLogin,

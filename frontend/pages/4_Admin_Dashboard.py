@@ -23,7 +23,7 @@ headers = {
 # Fetch history
 # ----------------------
 response = requests.get(
-    "http://127.0.0.1:8000/history",
+    "http://backend:8000/history",
     headers=headers
 )
 

@@ -1,0 +1,41 @@
+# Python environments
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Git
+.git
+.github
+
+# IDE
+.vscode
+.idea
+
+# Environment
+.env
+
+# Datasets (do not copy training data into Docker image)
+data/
+
+# Generated files
+outputs/
+uploads/
+reports/
+results/
+
+# Tests
+tests/
+
+# Logs
+*.log
+
+# Jupyter
+*.ipynb
+
+# OS files
+.DS_Store
+Thumbs.db

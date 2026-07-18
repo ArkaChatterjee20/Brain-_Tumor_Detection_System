@@ -1,5 +1,11 @@
 import streamlit as st
 import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+BACKEND_URL = os.getenv("BACKEND_URL")
 
 st.set_page_config(
     page_title="Register",
@@ -34,7 +40,7 @@ if st.button("Register"):
     }
 
     response = requests.post(
-        "http://127.0.0.1:8000/auth/register",
+        f"{BACKEND_URL}/auth/register",
         json=data
     )
 
