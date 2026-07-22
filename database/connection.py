@@ -18,6 +18,14 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL is not set.")
 
+# Railway provides mysql://, SQLAlchemy needs mysql+pymysql://
+if DATABASE_URL.startswith("mysql://"):
+    DATABASE_URL = DATABASE_URL.replace(
+        "mysql://",
+        "mysql+pymysql://",
+        1
+    )
+
 # ----------------------------------------------------
 # Wait for Database (Docker)
 # ----------------------------------------------------
