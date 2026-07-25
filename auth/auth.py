@@ -14,10 +14,7 @@ from database.user_service import (
     get_user_by_email
 )
 
-from auth.schemas import (
-    UserCreate,
-    UserLogin
-)
+
 
 from auth.hashing import (
     hash_password,
@@ -27,6 +24,8 @@ from auth.hashing import (
 from auth.token import (
     create_access_token
 )
+from auth.schemas import UserCreate
+from fastapi.security import OAuth2PasswordRequestForm
 
 
 router = APIRouter(
@@ -102,82 +101,48 @@ def register(
             status_code=500,
             detail=str(e)
         )
+
+
 @router.post("/login")
 def login(
-    user: UserLogin,
+    form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-
     try:
-
-        print("\n========== LOGIN ATTEMPT ==========")
-        print("Email entered:", user.email)
 
         db_user = get_user_by_email(
             db,
-            user.email
+            form_data.username      # user enters email here
         )
-
-        print("Database user:", db_user)
 
         if db_user is None:
-
             raise HTTPException(
-
                 status_code=401,
-
                 detail="Invalid email"
-
             )
 
-        password_verified = verify_password(
-
-            user.password,
-
+        if not verify_password(
+            form_data.password,
             db_user.password
-
-        )
-
-        print("Password verified:", password_verified)
-
-        if not password_verified:
-
+        ):
             raise HTTPException(
-
                 status_code=401,
-
                 detail="Invalid password"
-
             )
 
         access_token = create_access_token(
-
-            data={
-                "sub": db_user.email
-            }
-
+            data={"sub": db_user.email}
         )
 
-        print("Login successful")
-
         return {
-
-            "access_token":
-            access_token,
-
-            "token_type":
-            "bearer"
-
+            "access_token": access_token,
+            "token_type": "bearer"
         }
 
     except HTTPException:
-
         raise
 
     except Exception as e:
-
-        print("LOGIN ERROR:", str(e))
-
         raise HTTPException(
             status_code=500,
             detail=str(e)
