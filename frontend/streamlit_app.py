@@ -65,8 +65,8 @@ if st.session_state.token is None:
 
             response = requests.post(
                 f"{BACKEND_URL}/auth/login",
-                json={
-                    "email": email,
+                data={
+                    "username": email,
                     "password": password
                 }
             )
