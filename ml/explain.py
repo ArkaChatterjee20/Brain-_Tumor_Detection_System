@@ -10,7 +10,8 @@ MODEL_PATH = "models/final/brain_tumor_classifier.keras"
 
 LAST_CONV_LAYER = "conv2d_2"
 
-OUTPUT_DIR = "outputs/gradcam"
+BASE_DIR = os.getcwd()
+OUTPUT_DIR = os.path.join(BASE_DIR, "outputs", "gradcam")
 
 os.makedirs(
     OUTPUT_DIR,

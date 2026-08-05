@@ -28,12 +28,12 @@ from backend.database_service import (
 from ml.explain import explain_prediction
 
 from database.connection import SessionLocal
-from database.prediction_model import Prediction
+
 
 from auth.auth import router as auth_router
 from auth.oauth2 import get_current_user
 from database.connection import Base, engine
-from database.user_model import User
+
 from database.prediction_model import Prediction
 
 
@@ -75,10 +75,16 @@ app = FastAPI(
 # ----------------------------------------------------
 # CORS
 # ----------------------------------------------------
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    "http://localhost:8501"
+)
+
+
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],      # Replace with Streamlit URL after deployment
+    allow_origins=[FRONTEND_URL],      # Replace with Streamlit URL after deployment
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -208,24 +214,19 @@ async def predict(
             f"Prediction completed for {current_user}"
         )
 
+        backend_url = os.getenv(
+                     "BACKEND_URL",
+                     "http://localhost:8000"
+        )
+
         return {
-
-            "prediction_id": prediction_record.id,
-
-            "prediction": prediction,
-
-            "confidence": round(
-                confidence * 100,
-                2
-            ),
-
-            "gradcam_image": gradcam_path,
-
-            "report_path": report_path,
-
-            "message": "Prediction completed successfully."
-
-        }
+    "prediction_id": prediction_record.id,
+    "prediction": prediction,
+    "confidence": round(confidence * 100, 2),
+    "gradcam_url": f"{backend_url}/gradcam/{prediction_record.id}",
+    "report_url": f"{backend_url}/download-report/{prediction_record.id}",
+    "message": "Prediction completed successfully."
+}
 
     except Exception as e:
 
@@ -261,27 +262,22 @@ def history(
     )
 
     history = []
+    backend_url = os.getenv(
+    "BACKEND_URL",
+    "http://localhost:8000"
+    )
 
     for record in records:
 
         history.append({
-
-            "id": record.id,
-
-            "filename": record.filename,
-
-            "predicted_class": record.predicted_class,
-
-            "confidence": record.confidence,
-
-            "gradcam_path": record.gradcam_path,
-
-            "report_path": record.report_path,
-
-            "prediction_time": record.prediction_time,
-
-            "user_email": record.user_email
-
+           "id": record.id,
+           "filename": record.filename,
+           "predicted_class": record.predicted_class,
+           "confidence": record.confidence,
+           "gradcam_url": f"{backend_url}/gradcam/{record.id}",
+           "report_url": f"{backend_url}/download-report/{record.id}",
+           "prediction_time": record.prediction_time,
+           "user_email": record.user_email
         })
 
     return history
@@ -381,5 +377,61 @@ def download_report(
         ),
 
         media_type="application/pdf"
+
+    )
+@app.get("/gradcam/{prediction_id}")
+def download_gradcam(
+
+    prediction_id: int,
+
+    db: Session = Depends(get_db),
+
+    current_user: str = Depends(get_current_user)
+
+):
+
+    prediction = (
+
+        db.query(Prediction)
+
+        .filter(
+
+            Prediction.id == prediction_id,
+
+            Prediction.user_email == current_user
+
+        )
+
+        .first()
+
+    )
+
+    if prediction is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Prediction not found."
+        )
+
+    if prediction.gradcam_path is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="GradCAM unavailable."
+        )
+
+    if not os.path.exists(prediction.gradcam_path):
+
+        raise HTTPException(
+            status_code=404,
+            detail="GradCAM image missing."
+        )
+
+    return FileResponse(
+
+         path=prediction.gradcam_path,
+         filename=os.path.basename(prediction.gradcam_path)
+
+        
 
     )

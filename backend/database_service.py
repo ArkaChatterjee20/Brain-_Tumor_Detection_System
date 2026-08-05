@@ -77,19 +77,19 @@ def get_dashboard_stats(
     total_users = db.query(User).count()
 
     glioma = query.filter(
-        Prediction.predicted_class == "Glioma"
+        Prediction.predicted_class == "glioma"
     ).count()
 
     meningioma = query.filter(
-        Prediction.predicted_class == "Meningioma"
+        Prediction.predicted_class == "meningioma"
     ).count()
 
     pituitary = query.filter(
-        Prediction.predicted_class == "Pituitary"
+        Prediction.predicted_class == "pituitary"
     ).count()
 
     notumor = query.filter(
-        Prediction.predicted_class == "No Tumor"
+        Prediction.predicted_class == "no_tumor"
     ).count()
 
     average_confidence = query.with_entities(

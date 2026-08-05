@@ -28,11 +28,11 @@ if "prediction" not in st.session_state:
 if "confidence" not in st.session_state:
     st.session_state.confidence = None
 
-if "gradcam" not in st.session_state:
-    st.session_state.gradcam = None
+if "gradcam_url" not in st.session_state:
+    st.session_state.gradcam_url = None
 
-if "report_path" not in st.session_state:
-    st.session_state.report_path = None
+if "report_url" not in st.session_state:
+    st.session_state.report_url = None
 
 # -----------------------------
 # Title
@@ -143,8 +143,10 @@ if st.sidebar.button("Logout"):
     st.session_state.token = None
     st.session_state.prediction = None
     st.session_state.confidence = None
-    st.session_state.gradcam = None
-    st.session_state.report_path = None
+    st.session_state.gradcam_url = None
+    st.session_state.report_url = None
+    if "prediction_id" in st.session_state:
+        del st.session_state["prediction_id"]
 
     st.rerun()
 
@@ -275,25 +277,16 @@ if uploaded_file is not None:
 
                 result = response.json()
 
-                st.session_state.prediction = result.get(
-                    "prediction"
-                )
+                st.session_state.prediction = result["prediction"]
 
-                st.session_state.confidence = result.get(
-                    "confidence"
-                )
+                st.session_state.confidence = result["confidence"]
 
-                st.session_state.gradcam = result.get(
-                    "gradcam_image"
-                )
+                st.session_state.prediction_id = result["prediction_id"]
+                st.session_state.gradcam_url = result["gradcam_url"]
+                st.session_state.report_url = result["report_url"]
 
-                st.session_state.report_path = result.get(
-                    "report_path"
-                )
 
-                st.success(
-                    "Prediction Completed Successfully"
-                )
+                st.success("Prediction Completed Successfully")
 
             else:
 
@@ -313,9 +306,8 @@ if uploaded_file is not None:
 # ==========================================================
 # Prediction Result
 # ==========================================================
-
 if st.session_state.prediction is not None:
-
+    
     st.divider()
 
     st.header("🧠 Prediction Result")
@@ -325,102 +317,91 @@ if st.session_state.prediction is not None:
     with col1:
 
         st.metric(
-
             "Prediction",
-
             st.session_state.prediction
-
         )
 
         st.metric(
-
             "Confidence",
-
             f"{st.session_state.confidence}%"
-
         )
 
         st.progress(
-
             min(
-                float(
-                    st.session_state.confidence
-                ) / 100,
+                float(st.session_state.confidence) / 100,
                 1.0
             )
-
         )
 
     with col2:
 
         try:
 
-            gradcam = Image.open(
+              headers = {
+                      "Authorization": f"Bearer {st.session_state.token}"
+                    }
 
-                st.session_state.gradcam
+              response = requests.get(
+                         st.session_state.gradcam_url,
+                         headers=headers
+                        )
 
-            )
+              if response.status_code == 200:
 
-            st.image(
+                from io import BytesIO
 
-                gradcam,
+                image = Image.open(BytesIO(response.content))
 
-                caption="Grad-CAM",
+                st.image(
+                  image,
+                  caption="Grad-CAM",
+                  use_container_width=True
+                )
 
-                use_container_width=True
+              else:
 
-            )
+                st.warning("Grad-CAM unavailable.")
 
-        except:
+        except Exception as e:
 
-            st.warning(
-
-                "Grad-CAM image unavailable."
-
-            )
-
+                st.warning(f"Grad-CAM unavailable.\n\n{e}")
 
 # ==========================================================
 # PDF Report
 # ==========================================================
 
-if st.session_state.report_path:
-
+if "prediction_id" in st.session_state:
+    
     st.divider()
 
     st.header("📄 AI Report")
+    
 
-    try:
+    headers = {
+        "Authorization": f"Bearer {st.session_state.token}"
+    }
+    
 
-        with open(
+    response = requests.get(
+        st.session_state.report_url,
+        headers=headers
+    )
+    
 
-            st.session_state.report_path,
+    if response.status_code == 200:
 
-            "rb"
-
-        ) as pdf:
-
-            st.download_button(
-
-                "📥 Download PDF Report",
-
-                pdf,
-
-                file_name="Brain_Tumor_Report.pdf",
-
-                mime="application/pdf",
-
-                use_container_width=True
-
-            )
-
-    except Exception as e:
-
-        st.warning(
-
-            f"Unable to load report\n\n{e}"
-
+        st.download_button(
+            "📥 Download PDF Report",
+            response.content,
+            file_name="Brain_Tumor_Report.pdf",
+            mime="application/pdf",
+            use_container_width=True
         )
+
+    else:
+        st.warning("Unable to download report.")
+
+    
 # ==========================================================
 # Prediction History
 # ==========================================================
@@ -512,25 +493,44 @@ if st.button(
 
                     with col2:
 
-                        try:
+                             try:
 
-                            gradcam = Image.open(
-                                item["gradcam_path"]
-                            )
+                                 headers = {
+                                    "Authorization": f"Bearer {st.session_state.token}"
+                                }
 
-                            st.image(
-                                gradcam,
-                                caption="Grad-CAM",
-                                use_container_width=True
-                            )
+                                 response = requests.get(
+                                     item["gradcam_url"],
+                                     headers=headers
+                                )
 
-                        except:
+                                 if response.status_code == 200:
 
-                            st.warning(
-                                "Grad-CAM unavailable."
-                            )
+                                    from io import BytesIO
 
-                st.divider()
+                                    image = Image.open(
+                                       BytesIO(response.content)
+                                    )
+
+                                    st.image(
+                                        image,
+                                        
+                                        use_container_width=True
+                                    )
+
+                                 else:
+
+                                    st.warning(
+                                      "Grad-CAM unavailable."
+                                    )
+
+                             except Exception as e:
+
+                                st.warning(
+                                  f"Unable to load Grad-CAM\n\n{e}"
+                                )
+
+                    st.divider()
 
     else:
 

@@ -46,60 +46,60 @@ if response.status_code == 200:
     else:
 
         for item in history:
+    
+          st.subheader(
+            item["filename"]
+          )
 
-            st.subheader(
+          st.write(
+            "Prediction:",
+            item["predicted_class"]
+          )
 
-                item["filename"]
+          st.write(
+             "Confidence:",
+              f"{item['confidence']} %"
+          )
 
-            )
+          st.write(
+             "Time:",
+             item["prediction_time"]
+          )
 
-            st.write(
+          try:
 
-                "Prediction:",
-                item["predicted_class"]
+              response = requests.get(
+                 item["gradcam_url"],
+                 headers=headers
+              )
 
-            )
+              if response.status_code == 200:
 
-            st.write(
-
-                "Confidence:",
-                f"{item['confidence']} %"
-
-            )
-
-            st.write(
-
-                "Time:",
-                item["prediction_time"]
-
-            )
-
-            try:
+                from io import BytesIO
 
                 image = Image.open(
-
-                    item["gradcam_path"]
-
+                    BytesIO(response.content)
                 )
 
                 st.image(
-
-                    image,
-
-                    width=300
-
+                  image,
+                  width=300,
+                  caption="Grad-CAM"
                 )
 
-            except:
+              else:
 
                 st.warning(
-
-                    "Grad-CAM image not found."
-
+                "Grad-CAM unavailable."
                 )
 
-            st.divider()
+          except Exception as e:
 
+            st.warning(
+            f"Unable to load Grad-CAM\n\n{e}"
+           )
+
+          st.divider()
 else:
 
     st.error(

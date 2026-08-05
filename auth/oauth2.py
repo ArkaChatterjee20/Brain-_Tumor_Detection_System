@@ -14,8 +14,8 @@ def get_current_user(
 ):
 
     print("\n========== TOKEN DEBUG ==========")
-    print("Received Token:")
-    print(token)
+    
+    
 
     try:
 
@@ -25,12 +25,11 @@ def get_current_user(
             algorithms=[ALGORITHM]
         )
 
-        print("Decoded Payload:")
-        print(payload)
+        
 
         email = payload.get("sub")
 
-        print("Email:", email)
+        
 
         if email is None:
             raise HTTPException(

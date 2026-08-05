@@ -20,7 +20,11 @@ def download_file(url, path):
 
     print(f"Downloading {os.path.basename(path)}...")
 
-    response = requests.get(url, stream=True)
+    response = requests.get(
+    url,
+    stream=True,
+    timeout=60
+)
     response.raise_for_status()
 
     with open(path, "wb") as f:

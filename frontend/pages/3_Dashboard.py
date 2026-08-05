@@ -15,8 +15,10 @@ headers = {
     f"Bearer {st.session_state['token']}"
 }
 
+BACKEND_URL = "http://127.0.0.1:8000"
+
 response = requests.get(
-    "http://backend:8000/dashboard",
+    f"{BACKEND_URL}/dashboard",
     headers=headers
 )
 

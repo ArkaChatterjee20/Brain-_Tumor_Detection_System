@@ -30,7 +30,7 @@ if DATABASE_URL.startswith("mysql://"):
         "mysql+pymysql://",
         1
     )
-print("Using DATABASE_URL =", DATABASE_URL)
+print("Database URL loaded successfully.")
 
 # ----------------------------------------------------
 # Wait for Database (Docker)
@@ -46,8 +46,9 @@ for attempt in range(MAX_RETRIES):
     try:
 
         engine = create_engine(
-            DATABASE_URL,
-            pool_pre_ping=True
+          DATABASE_URL,
+          pool_pre_ping=True,
+          pool_recycle=3600
         )
 
         connection = engine.connect()

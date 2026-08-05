@@ -22,7 +22,8 @@ from reportlab.platypus import (
 
 )
 
-REPORT_FOLDER = "reports"
+BASE_DIR = os.getcwd()
+REPORT_FOLDER = os.path.join(BASE_DIR, "reports")
 
 os.makedirs(
 

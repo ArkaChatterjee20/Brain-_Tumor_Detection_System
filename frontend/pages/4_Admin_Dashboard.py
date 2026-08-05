@@ -1,6 +1,14 @@
 import streamlit as st
 import requests
 import pandas as pd
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+BACKEND_URL = os.getenv(
+    "BACKEND_URL",
+    "http://localhost:8000"
+)
 
 st.set_page_config(
     page_title="Admin Dashboard",
@@ -22,20 +30,27 @@ headers = {
 # ----------------------
 # Fetch history
 # ----------------------
-response = requests.get(
-    "http://backend:8000/history",
+dashboard_response = requests.get(
+    f"{BACKEND_URL}/dashboard",
     headers=headers
 )
 
-if response.status_code != 200:
-    st.error("Unable to load data.")
+if dashboard_response.status_code != 200:
+    st.error("Unable to load dashboard.")
     st.stop()
 
-history = response.json()
+dashboard = dashboard_response.json()
 
-if len(history) == 0:
-    st.info("No prediction records found.")
+history_response = requests.get(
+    f"{BACKEND_URL}/history",
+    headers=headers
+)
+
+if history_response.status_code != 200:
+    st.error("Unable to load prediction history.")
     st.stop()
+
+history = history_response.json()
 
 # Convert to DataFrame
 df = pd.DataFrame(history)
@@ -46,24 +61,22 @@ df = pd.DataFrame(history)
 st.subheader("Overall Statistics")
 
 col1, col2, col3 = st.columns(3)
-
 with col1:
     st.metric(
         "Total Predictions",
-        len(df)
+        dashboard["total_predictions"]
     )
 
 with col2:
     st.metric(
-        "Total Patients",
-        df["filename"].nunique()
+        "Total Users",
+        dashboard["total_users"]
     )
 
 with col3:
-    avg_conf = round(df["confidence"].mean(), 2)
     st.metric(
         "Average Confidence (%)",
-        avg_conf
+        dashboard["average_confidence"]
     )
 
 # ----------------------
