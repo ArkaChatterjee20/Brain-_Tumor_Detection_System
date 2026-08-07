@@ -1,42 +1,45 @@
 import os
 import cv2
 import numpy as np
-import tensorflow as tf
 from PIL import Image
 
+from backend.predict import model
 from ml.gradcam import generate_gradcam
 
-MODEL_PATH = "models/final/brain_tumor_classifier.keras"
 
 LAST_CONV_LAYER = "conv2d_2"
 
+
 BASE_DIR = os.getcwd()
-OUTPUT_DIR = os.path.join(BASE_DIR, "outputs", "gradcam")
+
+OUTPUT_DIR = os.path.join(
+    BASE_DIR,
+    "outputs",
+    "gradcam"
+)
 
 os.makedirs(
     OUTPUT_DIR,
     exist_ok=True
 )
 
-print("Loading model for Grad-CAM...")
 
-model = tf.keras.models.load_model(
-    MODEL_PATH,
-    compile=False
+print(
+    "Grad-CAM will use the shared TensorFlow model."
 )
 
-dummy = tf.random.normal(
-    (1, 224, 224, 3)
-)
 
-_ = model(dummy)
-
-print("Model loaded successfully.")
-
+# ----------------------------------------------------
+# Explain prediction
+# ----------------------------------------------------
 
 def explain_prediction(image_path):
 
     try:
+
+        # ---------------------------------------------
+        # Load image
+        # ---------------------------------------------
 
         img = Image.open(
             image_path
@@ -56,20 +59,41 @@ def explain_prediction(image_path):
             axis=0
         )
 
+
+        # ---------------------------------------------
+        # Generate Grad-CAM
+        # ---------------------------------------------
+
         heatmap = generate_gradcam(
             model,
             input_image,
             LAST_CONV_LAYER
         )
 
+
+        # ---------------------------------------------
+        # Load original image
+        # ---------------------------------------------
+
         original = cv2.imread(
             image_path
         )
+
+        if original is None:
+
+            raise ValueError(
+                "Unable to read original image."
+            )
 
         original = cv2.resize(
             original,
             (224, 224)
         )
+
+
+        # ---------------------------------------------
+        # Resize heatmap
+        # ---------------------------------------------
 
         heatmap = cv2.resize(
             heatmap,
@@ -80,10 +104,20 @@ def explain_prediction(image_path):
             255 * heatmap
         )
 
+
+        # ---------------------------------------------
+        # Apply color map
+        # ---------------------------------------------
+
         heatmap = cv2.applyColorMap(
             heatmap,
             cv2.COLORMAP_JET
         )
+
+
+        # ---------------------------------------------
+        # Overlay
+        # ---------------------------------------------
 
         overlay = cv2.addWeighted(
             original,
@@ -92,6 +126,11 @@ def explain_prediction(image_path):
             0.4,
             0
         )
+
+
+        # ---------------------------------------------
+        # Save Grad-CAM
+        # ---------------------------------------------
 
         filename = os.path.basename(
             image_path
@@ -107,7 +146,9 @@ def explain_prediction(image_path):
             overlay
         )
 
+
         return output_path
+
 
     except Exception as e:
 
