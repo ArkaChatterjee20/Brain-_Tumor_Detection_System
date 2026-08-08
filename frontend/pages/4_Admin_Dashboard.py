@@ -116,13 +116,16 @@ st.dataframe(
 # ----------------------
 st.divider()
 
-csv = display_df.to_csv(index=False)
+csv_data = display_df.to_csv(
+    index=False
+).encode("utf-8")
 
 st.download_button(
     label="⬇ Download Prediction Data",
-    data=csv,
+    data=csv_data,
     file_name="prediction_history.csv",
-    mime="text/csv"
+    mime="text/csv",
+    key="admin_csv_download"
 )
 
 # ----------------------

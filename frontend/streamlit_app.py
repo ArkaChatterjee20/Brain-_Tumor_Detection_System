@@ -446,22 +446,16 @@ if st.button(
                 use_container_width=True
             )
 
-            csv = history_df.to_csv(
-                index=False
-            ).encode("utf-8")
+            csv_data = history_df.to_csv(
+             index=False
+             ).encode("utf-8")
 
             st.download_button(
-
-                "⬇ Download History CSV",
-
-                csv,
-
-                "prediction_history.csv",
-
-                "text/csv",
-
-                use_container_width=True
-
+              label="⬇ Download Prediction History CSV",
+              data=csv_data,
+              file_name="prediction_history.csv",
+              mime="text/csv",
+              key="history_csv_download"
             )
 
             st.divider()

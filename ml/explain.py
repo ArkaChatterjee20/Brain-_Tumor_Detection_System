@@ -152,9 +152,13 @@ def explain_prediction(image_path):
 
     except Exception as e:
 
-        print(
-            "GradCAM Error:",
-            str(e)
-        )
+        print("========== GRADCAM ERROR ==========")
+        print(type(e).__name__)
+        print(str(e))
+
+        import traceback
+        traceback.print_exc()
+
+        print("===================================")
 
         return None
