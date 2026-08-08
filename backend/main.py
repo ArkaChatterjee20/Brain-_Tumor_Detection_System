@@ -216,7 +216,7 @@ async def predict(
 
         backend_url = os.getenv(
                      "BACKEND_URL",
-                     "http://localhost:8000"
+                     "https://brain-tumor-detection-system-bzzb.onrender.com"
         )
 
         return {
@@ -264,7 +264,7 @@ def history(
     history = []
     backend_url = os.getenv(
     "BACKEND_URL",
-    "http://localhost:8000"
+    "https://brain-tumor-detection-system-bzzb.onrender.com"
     )
 
     for record in records:
