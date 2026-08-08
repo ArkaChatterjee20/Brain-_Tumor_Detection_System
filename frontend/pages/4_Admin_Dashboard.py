@@ -7,7 +7,7 @@ load_dotenv()
 
 BACKEND_URL = os.getenv(
     "BACKEND_URL",
-    "http://localhost:8000"
+     "https://brain-tumor-detection-system-bzzb.onrender.com"
 )
 
 st.set_page_config(

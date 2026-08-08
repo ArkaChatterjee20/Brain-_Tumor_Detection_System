@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8000")
+BACKEND_URL = os.getenv("BACKEND_URL",  "https://brain-tumor-detection-system-bzzb.onrender.com")
 
 st.title("📜 Prediction History")
 

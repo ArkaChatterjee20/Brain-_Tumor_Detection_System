@@ -15,7 +15,7 @@ headers = {
     f"Bearer {st.session_state['token']}"
 }
 
-BACKEND_URL = "http://127.0.0.1:8000"
+BACKEND_URL =  "https://brain-tumor-detection-system-bzzb.onrender.com"
 
 response = requests.get(
     f"{BACKEND_URL}/dashboard",
