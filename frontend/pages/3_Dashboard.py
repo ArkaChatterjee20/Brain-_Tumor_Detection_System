@@ -19,7 +19,8 @@ BACKEND_URL =  "https://brain-tumor-detection-system-bzzb.onrender.com"
 
 response = requests.get(
     f"{BACKEND_URL}/dashboard",
-    headers=headers
+    headers=headers,
+    timeout=60
 )
 
 if response.status_code == 200:

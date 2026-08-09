@@ -29,7 +29,8 @@ response = requests.get(
 
     f"{BACKEND_URL}/history",
 
-    headers=headers
+    headers=headers,
+    timeout=60
 
 )
 
@@ -47,59 +48,67 @@ if response.status_code == 200:
 
         for item in history:
     
-          st.subheader(
-            item["filename"]
-          )
+         with st.container():
 
-          st.write(
+           st.subheader(item["filename"])
+
+           st.write(
             "Prediction:",
             item["predicted_class"]
-          )
-
-          st.write(
-             "Confidence:",
-              f"{item['confidence']} %"
-          )
-
-          st.write(
-             "Time:",
-             item["prediction_time"]
-          )
-
-          try:
-
-              response = requests.get(
-                 item["gradcam_url"],
-                 headers=headers
-              )
-
-              if response.status_code == 200:
-
-                from io import BytesIO
-
-                image = Image.open(
-                    BytesIO(response.content)
-                )
-
-                st.image(
-                  image,
-                  width=300,
-                  caption="Grad-CAM"
-                )
-
-              else:
-
-                st.warning(
-                "Grad-CAM unavailable."
-                )
-
-          except Exception as e:
-
-            st.warning(
-            f"Unable to load Grad-CAM\n\n{e}"
            )
 
-          st.divider()
+           st.write(
+            "Confidence:",
+            f"{item['confidence']} %"
+           )
+
+           st.write(
+            "Prediction Time:",
+            item["prediction_time"]
+           )
+
+           if st.button(
+            f"View Grad-CAM - {item['filename']}",
+            key=f"gradcam_{item['id']}"
+        ):
+
+            try:
+
+                gradcam_response = requests.get(
+                    item["gradcam_url"],
+                    headers=headers,
+                    timeout=60
+                )
+
+                if gradcam_response.status_code == 200:
+
+                    from io import BytesIO
+
+                    image = Image.open(
+                        BytesIO(
+                            gradcam_response.content
+                        )
+                    )
+
+                    st.image(
+                        image,
+                        caption="Grad-CAM",
+                        width=300
+                    )
+
+                else:
+
+                    st.warning(
+                        "Grad-CAM unavailable."
+                    )
+
+            except requests.exceptions.RequestException as e:
+
+                st.warning(
+                    f"Unable to load Grad-CAM: {e}"
+                )
+
+        st.divider()
 else:
 
     st.error(
