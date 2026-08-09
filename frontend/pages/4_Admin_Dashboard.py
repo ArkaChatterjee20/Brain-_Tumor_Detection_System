@@ -32,7 +32,9 @@ headers = {
 # ----------------------
 dashboard_response = requests.get(
     f"{BACKEND_URL}/dashboard",
-    headers=headers
+    headers=headers,
+    timeout = 180
+    
 )
 
 if dashboard_response.status_code != 200:
@@ -43,7 +45,9 @@ dashboard = dashboard_response.json()
 
 history_response = requests.get(
     f"{BACKEND_URL}/history",
-    headers=headers
+    headers=headers,
+    timeout = 180
+    
 )
 
 if history_response.status_code != 200:

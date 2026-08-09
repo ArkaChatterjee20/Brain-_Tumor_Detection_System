@@ -28,7 +28,7 @@ try:
         response = requests.get(
             f"{BACKEND_URL}/dashboard",
             headers=headers,
-            timeout=60
+            timeout=180
         )
 
 except requests.exceptions.Timeout:

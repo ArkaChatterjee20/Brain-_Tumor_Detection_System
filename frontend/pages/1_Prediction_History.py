@@ -30,7 +30,7 @@ response = requests.get(
     f"{BACKEND_URL}/history",
 
     headers=headers,
-    timeout=60
+    timeout=180
 
 )
 
@@ -77,7 +77,7 @@ if response.status_code == 200:
                 gradcam_response = requests.get(
                     item["gradcam_url"],
                     headers=headers,
-                    timeout=60
+                    timeout=180
                 )
 
                 if gradcam_response.status_code == 200:
