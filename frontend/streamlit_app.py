@@ -42,7 +42,8 @@ st.title("🧠 Brain Tumor Detection System")
 # -----------------------------
 # Login
 # -----------------------------
-if st.session_state.token is None:
+if "token" not in st.session_state:
+    st.session_state["token"] = None
     
     page = st.radio(
         "Choose",

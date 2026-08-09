@@ -1,73 +1,165 @@
-import streamlit as st
-import requests
-from PIL import Image
 import os
+from io import BytesIO
+
+import requests
+import streamlit as st
+from PIL import Image
 from dotenv import load_dotenv
+
+
+# --------------------------------------------------
+# Load environment variables
+# --------------------------------------------------
 
 load_dotenv()
 
-BACKEND_URL = os.getenv("BACKEND_URL",  "https://brain-tumor-detection-system-bzzb.onrender.com")
+BACKEND_URL = os.getenv(
+    "BACKEND_URL",
+    "https://brain-tumor-detection-system-bzzb.onrender.com"
+).rstrip("/")
+
+
+# --------------------------------------------------
+# Page title
+# --------------------------------------------------
 
 st.title("📜 Prediction History")
 
-if "token" not in st.session_state:
 
-    st.warning(
-        "Please login first."
+# --------------------------------------------------
+# Authentication check
+# --------------------------------------------------
+
+token = st.session_state.get("token")
+
+if not token:
+    st.warning("Please login first.")
+    st.stop()
+
+
+# --------------------------------------------------
+# Headers
+# --------------------------------------------------
+
+headers = {
+    "Authorization": f"Bearer {token}"
+}
+
+
+# --------------------------------------------------
+# Get prediction history
+# --------------------------------------------------
+
+try:
+
+    response = requests.get(
+        f"{BACKEND_URL}/history",
+        headers=headers,
+        timeout=(10, 120)
+    )
+
+except requests.exceptions.Timeout:
+
+    st.error(
+        "The backend took too long to respond. "
+        "Please try again."
     )
 
     st.stop()
 
-headers = {
+except requests.exceptions.ConnectionError:
 
-    "Authorization":
-    f"Bearer {st.session_state['token']}"
+    st.error(
+        "Unable to connect to the backend. "
+        "Please try again in a few seconds."
+    )
 
-}
+    st.stop()
 
-response = requests.get(
+except requests.exceptions.RequestException as e:
 
-    f"{BACKEND_URL}/history",
+    st.error(
+        f"Unable to fetch prediction history: {e}"
+    )
 
-    headers=headers,
-    timeout=180
+    st.stop()
 
-)
 
-if response.status_code == 200:
+# --------------------------------------------------
+# Handle authentication failure
+# --------------------------------------------------
 
-    history = response.json()
+if response.status_code == 401:
 
-    if len(history) == 0:
+    st.error(
+        "Your login session has expired. "
+        "Please login again."
+    )
 
-        st.info(
-            "No prediction history found."
+    st.stop()
+
+
+# --------------------------------------------------
+# Handle other errors
+# --------------------------------------------------
+
+if response.status_code != 200:
+
+    st.error(
+        f"Unable to fetch history. "
+        f"Backend status: {response.status_code}"
+    )
+
+    st.stop()
+
+
+# --------------------------------------------------
+# Read history
+# --------------------------------------------------
+
+history = response.json()
+
+
+if not history:
+
+    st.info("No prediction history found.")
+
+    st.stop()
+
+
+# --------------------------------------------------
+# Display history
+# --------------------------------------------------
+
+for item in history:
+
+    with st.container():
+
+        st.subheader(
+            item["filename"]
         )
 
-    else:
-
-        for item in history:
-    
-         with st.container():
-
-           st.subheader(item["filename"])
-
-           st.write(
+        st.write(
             "Prediction:",
             item["predicted_class"]
-           )
+        )
 
-           st.write(
+        st.write(
             "Confidence:",
             f"{item['confidence']} %"
-           )
+        )
 
-           st.write(
+        st.write(
             "Prediction Time:",
             item["prediction_time"]
-           )
+        )
 
-           if st.button(
+
+        # --------------------------------------------------
+        # Grad-CAM
+        # --------------------------------------------------
+
+        if st.button(
             f"View Grad-CAM - {item['filename']}",
             key=f"gradcam_{item['id']}"
         ):
@@ -77,12 +169,10 @@ if response.status_code == 200:
                 gradcam_response = requests.get(
                     item["gradcam_url"],
                     headers=headers,
-                    timeout=180
+                    timeout=(10, 120)
                 )
 
                 if gradcam_response.status_code == 200:
-
-                    from io import BytesIO
 
                     image = Image.open(
                         BytesIO(
@@ -96,11 +186,37 @@ if response.status_code == 200:
                         width=300
                     )
 
+                elif gradcam_response.status_code == 401:
+
+                    st.error(
+                        "Your login session has expired."
+                    )
+
+                elif gradcam_response.status_code == 404:
+
+                    st.warning(
+                        "Grad-CAM is unavailable for this prediction."
+                    )
+
                 else:
 
                     st.warning(
-                        "Grad-CAM unavailable."
+                        f"Grad-CAM request failed "
+                        f"({gradcam_response.status_code})."
                     )
+
+            except requests.exceptions.Timeout:
+
+                st.warning(
+                    "Grad-CAM request timed out. "
+                    "Please try again."
+                )
+
+            except requests.exceptions.ConnectionError:
+
+                st.warning(
+                    "Could not connect to the backend."
+                )
 
             except requests.exceptions.RequestException as e:
 
@@ -108,11 +224,70 @@ if response.status_code == 200:
                     f"Unable to load Grad-CAM: {e}"
                 )
 
+
+        # --------------------------------------------------
+        # Download report
+        # --------------------------------------------------
+
+        if st.button(
+            f"Download Report - {item['filename']}",
+            key=f"report_{item['id']}"
+        ):
+
+            try:
+
+                report_response = requests.get(
+                    item["report_url"],
+                    headers=headers,
+                    timeout=(10, 120)
+                )
+
+                if report_response.status_code == 200:
+
+                    st.download_button(
+                        label="📄 Download PDF",
+                        data=report_response.content,
+                        file_name=f"report_{item['id']}.pdf",
+                        mime="application/pdf",
+                        key=f"download_pdf_{item['id']}"
+                    )
+
+                elif report_response.status_code == 401:
+
+                    st.error(
+                        "Your login session has expired."
+                    )
+
+                elif report_response.status_code == 404:
+
+                    st.warning(
+                        "Report is not available."
+                    )
+
+                else:
+
+                    st.warning(
+                        f"Report request failed "
+                        f"({report_response.status_code})."
+                    )
+
+            except requests.exceptions.Timeout:
+
+                st.warning(
+                    "Report generation/download timed out."
+                )
+
+            except requests.exceptions.ConnectionError:
+
+                st.warning(
+                    "Could not connect to the backend."
+                )
+
+            except requests.exceptions.RequestException as e:
+
+                st.warning(
+                    f"Unable to download report: {e}"
+                )
+
+
         st.divider()
-else:
-
-    st.error(
-
-        "Unable to fetch history"
-
-    )

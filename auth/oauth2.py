@@ -4,6 +4,7 @@ from jose import jwt, JWTError
 
 from auth.config import SECRET_KEY, ALGORITHM
 
+
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/auth/login"
 )
@@ -13,10 +14,6 @@ def get_current_user(
     token: str = Depends(oauth2_scheme)
 ):
 
-    print("\n========== TOKEN DEBUG ==========")
-    
-    
-
     try:
 
         payload = jwt.decode(
@@ -25,13 +22,10 @@ def get_current_user(
             algorithms=[ALGORITHM]
         )
 
-        
-
         email = payload.get("sub")
 
-        
-
         if email is None:
+
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid Token"
@@ -39,10 +33,7 @@ def get_current_user(
 
         return email
 
-    except JWTError as e:
-
-        print("JWT ERROR:")
-        print(str(e))
+    except JWTError:
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
