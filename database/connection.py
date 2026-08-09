@@ -48,7 +48,14 @@ for attempt in range(MAX_RETRIES):
         engine = create_engine(
           DATABASE_URL,
           pool_pre_ping=True,
-          pool_recycle=3600
+          pool_recycle=1800,
+          pool_size=5,
+          max_overflow=2,
+          connect_args={
+          "connect_timeout": 10,
+          "read_timeout": 30,
+          "write_timeout": 30
+          }
         )
 
         connection = engine.connect()

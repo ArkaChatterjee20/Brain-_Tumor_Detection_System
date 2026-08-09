@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, case
 
 from database.prediction_model import Prediction
 from database.user_model import User
@@ -65,6 +65,7 @@ def get_dashboard_stats(
     user_email: str = None
 ):
 
+    # Base query
     query = db.query(Prediction)
 
     if user_email:
@@ -72,50 +73,65 @@ def get_dashboard_stats(
             Prediction.user_email == user_email
         )
 
-    total_predictions = query.count()
+    # Get prediction statistics in ONE database query
+    stats = query.with_entities(
+        func.count(Prediction.id).label("total_predictions"),
 
-    total_users = db.query(User).count()
+        func.sum(
+            case(
+                (Prediction.predicted_class == "glioma", 1),
+                else_=0
+            )
+        ).label("glioma"),
 
-    glioma = query.filter(
-        Prediction.predicted_class == "glioma"
-    ).count()
+        func.sum(
+            case(
+                (Prediction.predicted_class == "meningioma", 1),
+                else_=0
+            )
+        ).label("meningioma"),
 
-    meningioma = query.filter(
-        Prediction.predicted_class == "meningioma"
-    ).count()
+        func.sum(
+            case(
+                (Prediction.predicted_class == "pituitary", 1),
+                else_=0
+            )
+        ).label("pituitary"),
 
-    pituitary = query.filter(
-        Prediction.predicted_class == "pituitary"
-    ).count()
+        func.sum(
+            case(
+                (Prediction.predicted_class == "no_tumor", 1),
+                else_=0
+            )
+        ).label("notumor"),
 
-    notumor = query.filter(
-        Prediction.predicted_class == "no_tumor"
-    ).count()
+        func.avg(
+            Prediction.confidence
+        ).label("average_confidence")
 
-    average_confidence = query.with_entities(
-        func.avg(Prediction.confidence)
+    ).first()
+
+    # Total users
+    total_users = db.query(
+        func.count(User.id)
     ).scalar()
-
-    if average_confidence is None:
-        average_confidence = 0
 
     return {
 
-        "total_users": total_users,
+        "total_users": total_users or 0,
 
-        "total_predictions": total_predictions,
+        "total_predictions": stats.total_predictions or 0,
 
-        "glioma": glioma,
+        "glioma": stats.glioma or 0,
 
-        "meningioma": meningioma,
+        "meningioma": stats.meningioma or 0,
 
-        "pituitary": pituitary,
+        "pituitary": stats.pituitary or 0,
 
-        "notumor": notumor,
+        "notumor": stats.notumor or 0,
 
         "average_confidence": round(
-            average_confidence,
+            float(stats.average_confidence or 0),
             2
         )
-
     }

@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import requests
 import pandas as pd
@@ -15,13 +16,45 @@ headers = {
     f"Bearer {st.session_state['token']}"
 }
 
-BACKEND_URL =  "https://brain-tumor-detection-system-bzzb.onrender.com"
-
-response = requests.get(
-    f"{BACKEND_URL}/dashboard",
-    headers=headers,
-    timeout=60
+BACKEND_URL = os.getenv(
+    "BACKEND_URL",
+    "https://brain-tumor-detection-system-bzzb.onrender.com"
 )
+
+try:
+
+    with st.spinner("Loading dashboard..."):
+
+        response = requests.get(
+            f"{BACKEND_URL}/dashboard",
+            headers=headers,
+            timeout=60
+        )
+
+except requests.exceptions.Timeout:
+
+    st.error(
+        "The backend took too long to respond. "
+        "Please try again."
+    )
+
+    st.stop()
+
+except requests.exceptions.ConnectionError:
+
+    st.error(
+        "Unable to connect to the backend."
+    )
+
+    st.stop()
+
+except requests.exceptions.RequestException as e:
+
+    st.error(
+        f"Dashboard request failed: {e}"
+    )
+
+    st.stop()
 
 if response.status_code == 200:
 
