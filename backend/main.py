@@ -197,9 +197,9 @@ async def predict(
         # ------------------------------------------------
 
         gradcam_storage_path = upload_file(
-            gradcam_path,
-            f"gradcam/{os.path.basename(gradcam_path)}",
-            "image/jpeg"
+           gradcam_path,
+           f"gradcam/{uuid4().hex}_{os.path.basename(gradcam_path)}",
+           "image/jpeg"
         )
 
         # ------------------------------------------------
@@ -219,9 +219,9 @@ async def predict(
         # ------------------------------------------------
 
         report_storage_path = upload_file(
-            report_path,
-            f"reports/{os.path.basename(report_path)}",
-            "application/pdf"
+          report_path,
+          f"reports/{uuid4().hex}_{os.path.basename(report_path)}",
+         "application/pdf"
         )
 
         # ------------------------------------------------
