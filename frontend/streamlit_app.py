@@ -8,7 +8,7 @@ import os
 
 BACKEND_URL = os.getenv(
     "BACKEND_URL",
-     "https://brain-tumor-detection-system-bzzb.onrender.com"
+    "http://localhost:8000"
 ).rstrip("/")
 st.set_page_config(
     page_title="Brain Tumor Detection",

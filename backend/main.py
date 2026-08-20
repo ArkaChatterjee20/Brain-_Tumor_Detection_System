@@ -39,6 +39,7 @@ from backend.supabase_storage import (
     upload_file,
     create_signed_url
 )
+from uuid import uuid4
 
 
 
@@ -156,9 +157,11 @@ async def predict(
         # Save uploaded MRI temporarily
         # ------------------------------------------------
 
+        safe_filename = f"{uuid4().hex}_{file.filename}"
+
         file_path = os.path.join(
             UPLOAD_FOLDER,
-            file.filename
+            safe_filename
         )
 
         with open(file_path, "wb") as buffer:

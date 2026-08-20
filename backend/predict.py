@@ -3,9 +3,17 @@ import requests
 import numpy as np
 from PIL import Image
 import tensorflow as tf
+BASE_DIR = os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))
+)
 
 
-MODEL_DIR = "models/final"
+
+MODEL_DIR = os.path.join(
+    BASE_DIR,
+    "models",
+    "final"
+)
 
 MODEL_PATH = os.path.join(
     MODEL_DIR,
@@ -48,7 +56,7 @@ def download_file(url, path):
     response = requests.get(
         url,
         stream=True,
-        timeout=60
+        timeout=300
     )
 
     response.raise_for_status()

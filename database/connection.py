@@ -40,41 +40,43 @@ MAX_RETRIES = 30
 RETRY_DELAY = 2  # seconds
 
 engine = None
+connected = False
 
 for attempt in range(MAX_RETRIES):
-
     try:
-
         engine = create_engine(
-          DATABASE_URL,
-          pool_pre_ping=True,
-          pool_recycle=1800,
-          pool_size=5,
-          max_overflow=2,
-          connect_args={
-          "connect_timeout": 10,
-          "read_timeout": 30,
-          "write_timeout": 30
-          }
+            DATABASE_URL,
+            pool_pre_ping=True,
+            pool_recycle=1800,
+            pool_size=5,
+            max_overflow=2,
+            connect_args={
+                "connect_timeout": 10,
+                "read_timeout": 30,
+                "write_timeout": 30
+            }
         )
 
         connection = engine.connect()
         connection.close()
 
-        print("✅ Database connected successfully.")
+        print("Database connected successfully.")
 
+        connected = True
         break
 
     except OperationalError:
-
         print(
-            f"⏳ Waiting for database... ({attempt + 1}/{MAX_RETRIES})"
+            f"Waiting for database... "
+            f"({attempt + 1}/{MAX_RETRIES})"
         )
 
         time.sleep(RETRY_DELAY)
 
-if engine is None:
-    raise RuntimeError("❌ Could not connect to the database.")
+if not connected:
+    raise RuntimeError(
+        "Could not connect to the database."
+    )
 
 # ----------------------------------------------------
 # Session
