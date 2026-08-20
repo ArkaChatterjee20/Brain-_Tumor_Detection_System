@@ -64,7 +64,7 @@ def download_file(url, path):
     with open(path, "wb") as f:
 
         for chunk in response.iter_content(
-            chunk_size=8192
+            chunk_size=1024 * 1024
         ):
 
             if chunk:
