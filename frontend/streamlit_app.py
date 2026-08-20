@@ -9,7 +9,7 @@ import os
 BACKEND_URL = os.getenv(
     "BACKEND_URL",
      "https://brain-tumor-detection-system-bzzb.onrender.com"
-)
+).rstrip("/")
 st.set_page_config(
     page_title="Brain Tumor Detection",
     page_icon="🧠",
@@ -42,8 +42,7 @@ st.title("🧠 Brain Tumor Detection System")
 # -----------------------------
 # Login
 # -----------------------------
-if "token" not in st.session_state:
-    st.session_state["token"] = None
+if not st.session_state.get("token"):
     
     page = st.radio(
         "Choose",
@@ -160,6 +159,12 @@ st.sidebar.markdown("✅ Grad-CAM")
 st.sidebar.markdown("✅ PDF Report")
 st.sidebar.markdown("✅ Prediction History")
 st.sidebar.markdown("✅ Dashboard")
+# Authentication Check
+# ----------------------------------------------------
+
+if not st.session_state.get("token"):
+    st.warning("Please login first.")
+    st.stop()
 # ==========================================================
 # Upload MRI Image
 # ==========================================================
@@ -170,6 +175,7 @@ uploaded_file = st.file_uploader(
     "Choose MRI Image",
     type=["jpg", "jpeg", "png"]
 )
+
 
 if uploaded_file is not None:
 
@@ -192,9 +198,7 @@ if uploaded_file is not None:
             Supported Formats
 
             • JPG
-
             • JPEG
-
             • PNG
             """
         )
@@ -204,9 +208,15 @@ if uploaded_file is not None:
             use_container_width=True
         ):
 
+            # Get current token
+            token = st.session_state.get("token")
+
+            if not token:
+                st.warning("Please login first.")
+                st.stop()
+
             headers = {
-                "Authorization":
-                f"Bearer {st.session_state.token}"
+                "Authorization": f"Bearer {token}"
             }
 
             files = {
@@ -217,93 +227,106 @@ if uploaded_file is not None:
                 )
             }
 
-            # -----------------------------
-            # DEBUG
-            # -----------------------------
+            try:
 
-            with st.expander("JWT Debug"):
+                with st.spinner(
+                    "Running CNN Model..."
+                ):
 
-                st.write("Current Token")
-
-                st.code(
-                    st.session_state.token
-                )
-
-                st.write("Headers")
-
-                st.write(headers)
-
-            with st.spinner(
-                "Running CNN Model..."
-            ):
-
-                response = requests.post(
-
-                    f"{BACKEND_URL}/predict",
-
-                    files=files,
-
-                    headers=headers
-
-                )
-
-            # -----------------------------
-            # DEBUG RESPONSE
-            # -----------------------------
-
-            with st.expander("Backend Response"):
-
-                st.write(
-                    "Status Code:",
-                    response.status_code
-                )
-
-                try:
-
-                    st.json(
-                        response.json()
+                    response = requests.post(
+                        f"{BACKEND_URL}/predict",
+                        headers=headers,
+                        files=files,
+                        timeout=180
                     )
 
-                except:
+                # ------------------------------------------------
+                # TOKEN EXPIRED / INVALID
+                # ------------------------------------------------
 
-                    st.write(
-                        response.text
+                if response.status_code == 401:
+
+                    st.session_state["token"] = None
+
+                    st.warning(
+                        "Your login session has expired. "
+                        "Please login again."
                     )
 
-            # -----------------------------
-            # Prediction Success
-            # -----------------------------
-
-            if response.status_code == 200:
-
-                result = response.json()
-
-                st.session_state.prediction = result["prediction"]
-
-                st.session_state.confidence = result["confidence"]
-
-                st.session_state.prediction_id = result["prediction_id"]
-                st.session_state.gradcam_url = result["gradcam_url"]
-                st.session_state.report_url = result["report_url"]
+                    st.rerun()
 
 
-                st.success("Prediction Completed Successfully")
+                # ------------------------------------------------
+                # SUCCESS
+                # ------------------------------------------------
 
-            else:
+                if response.status_code == 200:
 
-                try:
+                    result = response.json()
+
+                    st.session_state["prediction"] = (
+                        result["prediction"]
+                    )
+
+                    st.session_state["confidence"] = (
+                        result["confidence"]
+                    )
+
+                    st.session_state["prediction_id"] = (
+                        result["prediction_id"]
+                    )
+
+                    st.session_state["gradcam_url"] = (
+                        result["gradcam_url"]
+                    )
+
+                    st.session_state["report_url"] = (
+                        result["report_url"]
+                    )
+
+                    st.success(
+                        "Prediction Completed Successfully"
+                    )
+
+                else:
+
+                    try:
+
+                        error_detail = response.json().get(
+                            "detail",
+                            "Prediction failed."
+                        )
+
+                    except Exception:
+
+                        error_detail = response.text
 
                     st.error(
-                        response.json()["detail"]
-                    )
-
-                except:
-
-                    st.error(
-                        response.text
+                        f"Prediction failed: {error_detail}"
                     )
 
 
+            except requests.exceptions.Timeout:
+
+                st.error(
+                    "The backend took too long to respond. "
+                    "Please try again."
+                )
+
+
+            except requests.exceptions.ConnectionError:
+
+                st.error(
+                    "Unable to connect to the backend. "
+                    "Please check that the backend is running."
+                )
+
+
+            except requests.exceptions.RequestException as e:
+
+                st.error(
+                    f"Request failed: {e}"
+                )
 # ==========================================================
 # Prediction Result
 # ==========================================================
@@ -343,8 +366,9 @@ if st.session_state.prediction is not None:
                     }
 
               response = requests.get(
-                         st.session_state.gradcam_url,
-                         headers=headers
+                          st.session_state.gradcam_url,
+                          headers=headers,
+                          timeout = (10,120)
                         )
 
               if response.status_code == 200:
@@ -383,13 +407,25 @@ if "prediction_id" in st.session_state:
     }
     
 
-    response = requests.get(
-        st.session_state.report_url,
-        headers=headers
+    try:
+
+        response = requests.get(
+          st.session_state.report_url,
+          headers=headers,
+          timeout=(10, 120)
     )
+
+    except requests.exceptions.RequestException as e:
+
+        st.warning(
+          f"Unable to download report: {e}"
+    )
+
+        response = None
+    
     
 
-    if response.status_code == 200:
+    if response is not None and response.status_code == 200:
 
         st.download_button(
             "📥 Download PDF Report",
@@ -423,10 +459,48 @@ if st.button(
 
     with st.spinner("Loading History..."):
 
-        response = requests.get(
-            f"{BACKEND_URL}/history",
-            headers=headers
-        )
+        try:
+
+             response = requests.get(
+              f"{BACKEND_URL}/history",
+              headers=headers,
+              timeout=(10, 120)
+            )
+
+        except requests.exceptions.Timeout:
+
+         st.error(
+        "Prediction history request timed out. "
+        "Please try again."
+    )
+
+         st.stop()
+
+        except requests.exceptions.ConnectionError:
+
+         st.error(
+        "Unable to connect to the backend."
+    )
+
+         st.stop()
+
+        except requests.exceptions.RequestException as e:
+
+         st.error(
+        f"Prediction history request failed: {e}"
+    )
+
+         st.stop()
+    if response.status_code == 401:
+    
+      st.session_state["token"] = None
+
+      st.warning(
+        "Your login session has expired. "
+        "Please login again."
+    )
+
+      st.rerun()
 
     if response.status_code == 200:
 
@@ -496,7 +570,8 @@ if st.button(
 
                                  response = requests.get(
                                      item["gradcam_url"],
-                                     headers=headers
+                                     headers=headers,
+                                     timeout = (10,120)
                                 )
 
                                  if response.status_code == 200:
@@ -554,10 +629,47 @@ if st.button(
         f"Bearer {st.session_state.token}"
     }
 
-    response = requests.get(
-        f"{BACKEND_URL}/dashboard",
-        headers=headers
+    try:
+
+         response = requests.get(
+           f"{BACKEND_URL}/dashboard",
+           headers=headers,
+           timeout=(10, 120)
     )
+
+    except requests.exceptions.Timeout:
+
+      st.error(
+        "Dashboard request timed out. Please try again."
+    )
+
+      st.stop()
+
+    except requests.exceptions.ConnectionError:
+
+      st.error(
+        "Unable to connect to the backend."
+    )
+
+      st.stop()
+
+    except requests.exceptions.RequestException as e:
+
+      st.error(
+        f"Dashboard request failed: {e}"
+    )
+
+      st.stop()
+    if response.status_code == 401:
+    
+     st.session_state["token"] = None
+
+     st.warning(
+        "Your login session has expired. "
+        "Please login again."
+    )
+
+     st.rerun()
 
     if response.status_code == 200:
 

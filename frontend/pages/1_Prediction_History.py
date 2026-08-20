@@ -33,7 +33,11 @@ st.title("📜 Prediction History")
 token = st.session_state.get("token")
 
 if not token:
-    st.warning("Please login first.")
+
+    st.warning(
+        "Please login first."
+    )
+
     st.stop()
 
 
@@ -122,7 +126,9 @@ history = response.json()
 
 if not history:
 
-    st.info("No prediction history found.")
+    st.info(
+        "No prediction history found."
+    )
 
     st.stop()
 
@@ -164,69 +170,69 @@ for item in history:
             key=f"gradcam_{item['id']}"
         ):
 
-            try:
+            gradcam_url = item.get(
+                "gradcam_url"
+            )
 
-                gradcam_response = requests.get(
-                    item["gradcam_url"],
-                    headers=headers,
-                    timeout=(10, 120)
+            if not gradcam_url:
+
+                st.warning(
+                    "Grad-CAM URL is not available "
+                    "for this prediction."
                 )
 
-                if gradcam_response.status_code == 200:
+            else:
 
-                    image = Image.open(
-                        BytesIO(
-                            gradcam_response.content
+                try:
+
+                    gradcam_response = requests.get(
+                        gradcam_url,
+                        timeout=(10, 120)
+                    )
+
+                    if gradcam_response.status_code == 200:
+
+                        image = Image.open(
+                            BytesIO(
+                                gradcam_response.content
+                            )
                         )
-                    )
 
-                    st.image(
-                        image,
-                        caption="Grad-CAM",
-                        width=300
-                    )
+                        st.image(
+                            image,
+                            caption="Grad-CAM",
+                            width=300
+                        )
 
-                elif gradcam_response.status_code == 401:
+                    else:
 
-                    st.error(
-                        "Your login session has expired."
-                    )
+                        st.warning(
+                            f"Grad-CAM request failed "
+                            f"({gradcam_response.status_code})."
+                        )
 
-                elif gradcam_response.status_code == 404:
-
-                    st.warning(
-                        "Grad-CAM is unavailable for this prediction."
-                    )
-
-                else:
+                except requests.exceptions.Timeout:
 
                     st.warning(
-                        f"Grad-CAM request failed "
-                        f"({gradcam_response.status_code})."
+                        "Grad-CAM request timed out. "
+                        "Please try again."
                     )
 
-            except requests.exceptions.Timeout:
+                except requests.exceptions.ConnectionError:
 
-                st.warning(
-                    "Grad-CAM request timed out. "
-                    "Please try again."
-                )
+                    st.warning(
+                        "Could not connect to Supabase."
+                    )
 
-            except requests.exceptions.ConnectionError:
+                except requests.exceptions.RequestException as e:
 
-                st.warning(
-                    "Could not connect to the backend."
-                )
-
-            except requests.exceptions.RequestException as e:
-
-                st.warning(
-                    f"Unable to load Grad-CAM: {e}"
-                )
+                    st.warning(
+                        f"Unable to load Grad-CAM: {e}"
+                    )
 
 
         # --------------------------------------------------
-        # Download report
+        # Download Report
         # --------------------------------------------------
 
         if st.button(
@@ -234,60 +240,70 @@ for item in history:
             key=f"report_{item['id']}"
         ):
 
-            try:
+            report_url = item.get(
+                "report_url"
+            )
 
-                report_response = requests.get(
-                    item["report_url"],
-                    headers=headers,
-                    timeout=(10, 120)
+            if not report_url:
+
+                st.warning(
+                    "Report URL is not available "
+                    "for this prediction."
                 )
 
-                if report_response.status_code == 200:
+            else:
 
-                    st.download_button(
-                        label="📄 Download PDF",
-                        data=report_response.content,
-                        file_name=f"report_{item['id']}.pdf",
-                        mime="application/pdf",
-                        key=f"download_pdf_{item['id']}"
+                try:
+
+                    report_response = requests.get(
+                        report_url,
+                        timeout=(10, 120)
                     )
 
-                elif report_response.status_code == 401:
+                    if report_response.status_code == 200:
 
-                    st.error(
-                        "Your login session has expired."
-                    )
+                        st.download_button(
 
-                elif report_response.status_code == 404:
+                            label="📄 Download PDF",
+
+                            data=report_response.content,
+
+                            file_name=(
+                                f"report_{item['id']}.pdf"
+                            ),
+
+                            mime="application/pdf",
+
+                            key=(
+                                f"download_pdf_{item['id']}"
+                            )
+
+                        )
+
+                    else:
+
+                        st.warning(
+                            f"Report request failed "
+                            f"({report_response.status_code})."
+                        )
+
+                except requests.exceptions.Timeout:
 
                     st.warning(
-                        "Report is not available."
+                        "Report download timed out."
                     )
 
-                else:
+                except requests.exceptions.ConnectionError:
 
                     st.warning(
-                        f"Report request failed "
-                        f"({report_response.status_code})."
+                        "Could not connect to Supabase."
                     )
 
-            except requests.exceptions.Timeout:
+                except requests.exceptions.RequestException as e:
 
-                st.warning(
-                    "Report generation/download timed out."
-                )
-
-            except requests.exceptions.ConnectionError:
-
-                st.warning(
-                    "Could not connect to the backend."
-                )
-
-            except requests.exceptions.RequestException as e:
-
-                st.warning(
-                    f"Unable to download report: {e}"
-                )
+                    st.warning(
+                        f"Unable to download report: {e}"
+                    )
 
 
         st.divider()

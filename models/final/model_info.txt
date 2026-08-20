@@ -1,0 +1,7 @@
+Brain Tumor Detection System
+=============================
+Selected Model : CNN
+Input Size     : (224, 224)
+Classes        : ['glioma', 'meningioma', 'no_tumor', 'pituitary']
+Test Accuracy  : 91.48%
+Test Loss      : 0.2508

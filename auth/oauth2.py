@@ -34,6 +34,9 @@ def get_current_user(
         return email
 
     except JWTError:
+        print("\n========== JWT ERROR ==========")
+        print(str(e))
+        print("===============================")
 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

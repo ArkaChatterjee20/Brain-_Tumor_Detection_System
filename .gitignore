@@ -1,54 +1,39 @@
 # Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
 
-# Virtual Environment
+# Virtual environments
 .venv/
 venv/
+env/
 
-# Environment
+# Environment variables
 .env
 
 # IDE
 .vscode/
 .idea/
 
-# Python cache
+# Cache
 .pytest_cache/
+.streamlit/
 
 # Logs
 *.log
 
-# Uploads
+# Generated files
 uploads/
+reports/
+results/
+outputs/
 
-# Reports
-reports/generated/
+# Dataset
+data/
 
-# Streamlit cache
-.streamlit/
+# Model files - downloaded during deployment/startup
+models/checkpoints/
+models/final/*.keras
 
 # OS
 .DS_Store
 Thumbs.db
-# Dataset
-data/
-
-# Trained models
-models/
-
-# Checkpoints
-models/checkpoints/
-
-# Generated results
-results/
-
-# Python cache
-__pycache__/
-*.pyc
-
-# Virtual environment
-.venv/
-env/

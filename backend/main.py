@@ -35,6 +35,10 @@ from auth.oauth2 import get_current_user
 from database.connection import Base, engine
 
 from database.prediction_model import Prediction
+from backend.supabase_storage import (
+    upload_file,
+    create_signed_url
+)
 
 
 
@@ -135,78 +139,99 @@ def home():
 # ----------------------------------------------------
 # Prediction API
 # ----------------------------------------------------
-
 @app.post("/predict")
 async def predict(
-
     file: UploadFile = File(...),
-
     db: Session = Depends(get_db),
-
     current_user: str = Depends(get_current_user)
-
 ):
 
     try:
 
-        logger.info(f"Prediction requested by {current_user}")
+        logger.info(
+            f"Prediction requested by {current_user}"
+        )
+
+        # ------------------------------------------------
+        # Save uploaded MRI temporarily
+        # ------------------------------------------------
 
         file_path = os.path.join(
             UPLOAD_FOLDER,
             file.filename
         )
 
-        with open(
-            file_path,
-            "wb"
-        ) as buffer:
+        with open(file_path, "wb") as buffer:
 
             shutil.copyfileobj(
                 file.file,
                 buffer
             )
 
+        # ------------------------------------------------
+        # Prediction
+        # ------------------------------------------------
+
         prediction, confidence = predict_image(
             file_path
         )
+
+        confidence_percent = round(
+            confidence * 100,
+            2
+        )
+
+        # ------------------------------------------------
+        # Generate Grad-CAM
+        # ------------------------------------------------
 
         gradcam_path = explain_prediction(
             file_path
         )
 
+        # ------------------------------------------------
+        # Upload Grad-CAM to Supabase
+        # ------------------------------------------------
+
+        gradcam_storage_path = upload_file(
+            gradcam_path,
+            f"gradcam/{os.path.basename(gradcam_path)}",
+            "image/jpeg"
+        )
+
+        # ------------------------------------------------
+        # Generate PDF report
+        # ------------------------------------------------
+
         report_path = generate_report(
-
             filename=file.filename,
-
             prediction=prediction,
-
-            confidence=round(
-                confidence * 100,
-                2
-            ),
-
+            confidence=confidence_percent,
             gradcam_path=gradcam_path,
-
             user_email=current_user
         )
 
+        # ------------------------------------------------
+        # Upload PDF to Supabase
+        # ------------------------------------------------
+
+        report_storage_path = upload_file(
+            report_path,
+            f"reports/{os.path.basename(report_path)}",
+            "application/pdf"
+        )
+
+        # ------------------------------------------------
+        # Save prediction in database
+        # ------------------------------------------------
+
         prediction_record = save_prediction(
-
             db=db,
-
             filename=file.filename,
-
             predicted_class=prediction,
-
-            confidence=round(
-                confidence * 100,
-                2
-            ),
-
-            gradcam_path=gradcam_path,
-
-            report_path=report_path,
-
+            confidence=confidence_percent,
+            gradcam_path=gradcam_storage_path,
+            report_path=report_storage_path,
             user_email=current_user
         )
 
@@ -214,42 +239,77 @@ async def predict(
             f"Prediction completed for {current_user}"
         )
 
-        backend_url = os.getenv(
-                     "BACKEND_URL",
-                     "https://brain-tumor-detection-system-bzzb.onrender.com"
+        # ------------------------------------------------
+        # Create signed URLs
+        # ------------------------------------------------
+
+        gradcam_url = create_signed_url(
+            prediction_record.gradcam_path,
+            expires_in=3600
         )
 
+        report_url = create_signed_url(
+            prediction_record.report_path,
+            expires_in=3600
+        )
+
+        # ------------------------------------------------
+        # Remove temporary local files
+        # ------------------------------------------------
+
+        try:
+
+            if os.path.exists(file_path):
+                os.remove(file_path)
+
+            if os.path.exists(gradcam_path):
+                os.remove(gradcam_path)
+
+            if os.path.exists(report_path):
+                os.remove(report_path)
+
+        except Exception as cleanup_error:
+
+            logger.warning(
+                f"Temporary file cleanup failed: "
+                f"{cleanup_error}"
+            )
+
+        # ------------------------------------------------
+        # Response
+        # ------------------------------------------------
+
         return {
-    "prediction_id": prediction_record.id,
-    "prediction": prediction,
-    "confidence": round(confidence * 100, 2),
-    "gradcam_url": f"{backend_url}/gradcam/{prediction_record.id}",
-    "report_url": f"{backend_url}/download-report/{prediction_record.id}",
-    "message": "Prediction completed successfully."
-}
+            "prediction_id": prediction_record.id,
+            "prediction": prediction,
+            "confidence": confidence_percent,
+            "gradcam_url": gradcam_url,
+            "report_url": report_url,
+            "message": "Prediction completed successfully."
+        }
 
     except Exception as e:
 
-        logger.exception("Prediction Error")
+        logger.exception(
+            "Prediction Error"
+        )
 
         raise HTTPException(
-
             status_code=500,
-
-            detail="Prediction failed."
-
+            detail=f"Prediction failed: {str(e)}"
         )
 
 # ----------------------------------------------------
 # Prediction History
-# ----------------------------------------------------
-
+# -----------------------------------------------
 @app.get("/history")
 def history(
 
     db: Session = Depends(get_db),
 
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(
+        get_current_user
+    )
 
 ):
 
@@ -262,23 +322,111 @@ def history(
     )
 
     history = []
-    backend_url = os.getenv(
-    "BACKEND_URL",
-    "https://brain-tumor-detection-system-bzzb.onrender.com"
-    )
+
 
     for record in records:
 
+        gradcam_url = None
+        report_url = None
+
+
+        # --------------------------------------------
+        # Grad-CAM signed URL
+        # --------------------------------------------
+
+        if record.gradcam_path:
+
+            try:
+
+                gradcam_url = create_signed_url(
+                    record.gradcam_path,
+                    expires_in=86400
+                )
+
+            except Exception as e:
+
+                logger.exception(
+                    f"Grad-CAM URL generation failed "
+                    f"for prediction {record.id}"
+                )
+
+
+        # --------------------------------------------
+        # Report signed URL
+        # --------------------------------------------
+
+        if record.report_path:
+
+            try:
+
+                report_url = create_signed_url(
+                    record.report_path,
+                    expires_in=86400
+                )
+
+            except Exception as e:
+
+                logger.exception(
+                    f"Report URL generation failed "
+                    f"for prediction {record.id}"
+                )
+
+
+        # --------------------------------------------
+        # Debug logging
+        # --------------------------------------------
+
+        logger.info(
+            f"Prediction ID: {record.id}"
+        )
+
+        logger.info(
+            f"GradCAM path: {record.gradcam_path}"
+        )
+
+        logger.info(
+            f"GradCAM URL: {gradcam_url}"
+        )
+
+        logger.info(
+            f"Report path: {record.report_path}"
+        )
+
+        logger.info(
+            f"Report URL: {report_url}"
+        )
+
+
+        # --------------------------------------------
+        # History record
+        # --------------------------------------------
+
         history.append({
-           "id": record.id,
-           "filename": record.filename,
-           "predicted_class": record.predicted_class,
-           "confidence": record.confidence,
-           "gradcam_url": f"{backend_url}/gradcam/{record.id}",
-           "report_url": f"{backend_url}/download-report/{record.id}",
-           "prediction_time": record.prediction_time,
-           "user_email": record.user_email
+
+            "id": record.id,
+
+            "filename": record.filename,
+
+            "predicted_class":
+                record.predicted_class,
+
+            "confidence":
+                record.confidence,
+
+            "gradcam_url":
+                gradcam_url,
+
+            "report_url":
+                report_url,
+
+            "prediction_time":
+                record.prediction_time,
+
+            "user_email":
+                record.user_email
+
         })
+
 
     return history
 
@@ -306,104 +454,71 @@ def dashboard(
 # ----------------------------------------------------
 # Download Report
 # ----------------------------------------------------
-
 @app.get("/download-report/{prediction_id}")
 def download_report(
-
     prediction_id: int,
-
     db: Session = Depends(get_db),
-
     current_user: str = Depends(get_current_user)
-
 ):
 
     prediction = (
-
         db.query(Prediction)
-
         .filter(
-
             Prediction.id == prediction_id,
-
             Prediction.user_email == current_user
-
         )
-
         .first()
-
     )
 
     if prediction is None:
 
         raise HTTPException(
-
             status_code=404,
-
             detail="Prediction not found."
-
         )
 
     if not prediction.report_path:
 
         raise HTTPException(
-
             status_code=404,
-
             detail="Report not available."
-
         )
 
-    if not os.path.exists(
+    try:
 
-        prediction.report_path
+        report_url = create_signed_url(
+            prediction.report_path,
+            expires_in=3600
+        )
 
-    ):
+        return {
+            "report_url": report_url
+        }
+
+    except Exception as e:
+
+        logger.exception(
+            "Report signed URL generation failed"
+        )
 
         raise HTTPException(
-
-            status_code=404,
-
-            detail="PDF file not found."
-
+            status_code=500,
+            detail="Unable to access report."
         )
-
-    return FileResponse(
-
-        path=prediction.report_path,
-
-        filename=os.path.basename(
-            prediction.report_path
-        ),
-
-        media_type="application/pdf"
-
-    )
 @app.get("/gradcam/{prediction_id}")
 def download_gradcam(
-
     prediction_id: int,
-
     db: Session = Depends(get_db),
-
     current_user: str = Depends(get_current_user)
-
 ):
 
     prediction = (
-
         db.query(Prediction)
-
         .filter(
-
             Prediction.id == prediction_id,
-
             Prediction.user_email == current_user
-
         )
-
         .first()
-
     )
 
     if prediction is None:
@@ -413,25 +528,31 @@ def download_gradcam(
             detail="Prediction not found."
         )
 
-    if prediction.gradcam_path is None:
+    if not prediction.gradcam_path:
 
         raise HTTPException(
             status_code=404,
-            detail="GradCAM unavailable."
+            detail="Grad-CAM unavailable."
         )
 
-    if not os.path.exists(prediction.gradcam_path):
+    try:
+
+        gradcam_url = create_signed_url(
+            prediction.gradcam_path,
+            expires_in=3600
+        )
+
+        return {
+            "gradcam_url": gradcam_url
+        }
+
+    except Exception as e:
+
+        logger.exception(
+            "Grad-CAM signed URL generation failed"
+        )
 
         raise HTTPException(
-            status_code=404,
-            detail="GradCAM image missing."
+            status_code=500,
+            detail="Unable to access Grad-CAM."
         )
-
-    return FileResponse(
-
-         path=prediction.gradcam_path,
-         filename=os.path.basename(prediction.gradcam_path)
-
-        
-
-    )
