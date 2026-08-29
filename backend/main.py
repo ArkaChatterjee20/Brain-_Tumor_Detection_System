@@ -211,41 +211,60 @@ async def predict(
         # Grad-CAM
         # ------------------------------------------------
 
+       # ------------------------------------------------
+# Grad-CAM
+# ------------------------------------------------
+
         logger.info("Starting Grad-CAM generation...")
 
-        gradcam_path = explain_prediction(
-           file_path
-        )
-
-        if gradcam_path:
-          logger.info(
-            f"Grad-CAM generated successfully: {gradcam_path}"
-        )
-        else:
-          logger.warning(
-            "Grad-CAM generation failed."
-        )
-
-        # ------------------------------------------------
-        # Upload Grad-CAM
-        # ------------------------------------------------
-
-        logger.info(
-            "Uploading Grad-CAM to Supabase..."
-        )
-
+        gradcam_path = None
         gradcam_storage_path = None
-        if gradcam_path:
-          gradcam_storage_path = upload_file(
-            gradcam_path,
-            f"gradcam/{os.path.basename(gradcam_path)}",
-            "image/jpeg"
-        )
 
-        logger.info(
-            f"Grad-CAM uploaded: "
-            f"{gradcam_storage_path}"
-        )
+        try:
+             gradcam_path = explain_prediction(file_path)
+
+             logger.info(
+               f"Grad-CAM generated successfully: {gradcam_path}"
+             )
+
+        except Exception as e:
+             logger.exception(
+                f"Grad-CAM generation failed: {e}"
+            )
+             gradcam_path = None
+
+
+# ------------------------------------------------
+# Upload Grad-CAM
+# ------------------------------------------------
+
+        if gradcam_path:
+
+            logger.info(
+               "Uploading Grad-CAM to Supabase..."
+            )
+
+            try:
+                gradcam_storage_path = upload_file(
+                  gradcam_path,
+                  f"gradcam/{os.path.basename(gradcam_path)}",
+                  "image/jpeg"
+                )
+
+                logger.info(
+                  f"Grad-CAM uploaded: {gradcam_storage_path}"
+                )
+
+            except Exception as e:
+                logger.exception(
+                   f"Grad-CAM upload failed: {e}"
+                )
+                gradcam_storage_path = None
+
+        else:
+            logger.warning(
+               "Grad-CAM unavailable. Continuing without Grad-CAM."
+            )
 
         # ------------------------------------------------
         # Generate PDF
