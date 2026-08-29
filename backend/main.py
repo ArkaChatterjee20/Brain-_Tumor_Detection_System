@@ -146,37 +146,53 @@ async def predict(
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
+    file_path = None
+    gradcam_path = None
+    report_path = None
 
     try:
-
         logger.info(
             f"Prediction requested by {current_user}"
         )
 
         # ------------------------------------------------
-        # Save uploaded MRI temporarily
+        # Save uploaded MRI
         # ------------------------------------------------
 
-        safe_filename = f"{uuid4().hex}_{file.filename}"
+        safe_filename = os.path.basename(file.filename)
 
         file_path = os.path.join(
             UPLOAD_FOLDER,
             safe_filename
         )
 
-        with open(file_path, "wb") as buffer:
+        logger.info("Saving uploaded MRI...")
 
+        with open(file_path, "wb") as buffer:
             shutil.copyfileobj(
                 file.file,
                 buffer
             )
 
+        logger.info(
+            f"MRI saved successfully: {file_path}"
+        )
+
         # ------------------------------------------------
         # Prediction
         # ------------------------------------------------
 
+        logger.info(
+            "Starting TensorFlow prediction..."
+        )
+
         prediction, confidence = predict_image(
             file_path
+        )
+
+        logger.info(
+            f"TensorFlow prediction completed: "
+            f"{prediction}"
         )
 
         confidence_percent = round(
@@ -184,53 +200,94 @@ async def predict(
             2
         )
 
+        logger.info(
+            f"Confidence: {confidence_percent}%"
+        )
+
         # ------------------------------------------------
-        # Generate Grad-CAM
+        # Grad-CAM
         # ------------------------------------------------
+
+        logger.info(
+            "Starting Grad-CAM generation..."
+        )
 
         gradcam_path = explain_prediction(
             file_path
         )
 
-        # ------------------------------------------------
-        # Upload Grad-CAM to Supabase
-        # ------------------------------------------------
-
-        gradcam_storage_path = upload_file(
-           gradcam_path,
-           f"gradcam/{uuid4().hex}_{os.path.basename(gradcam_path)}",
-           "image/jpeg"
+        logger.info(
+            f"Grad-CAM generated: {gradcam_path}"
         )
 
         # ------------------------------------------------
-        # Generate PDF report
+        # Upload Grad-CAM
         # ------------------------------------------------
 
+        logger.info(
+            "Uploading Grad-CAM to Supabase..."
+        )
+
+        gradcam_storage_path = upload_file(
+            gradcam_path,
+            f"gradcam/{os.path.basename(gradcam_path)}",
+            "image/jpeg"
+        )
+
+        logger.info(
+            f"Grad-CAM uploaded: "
+            f"{gradcam_storage_path}"
+        )
+
+        # ------------------------------------------------
+        # Generate PDF
+        # ------------------------------------------------
+
+        logger.info(
+            "Generating PDF report..."
+        )
+
         report_path = generate_report(
-            filename=file.filename,
+            filename=safe_filename,
             prediction=prediction,
             confidence=confidence_percent,
             gradcam_path=gradcam_path,
             user_email=current_user
         )
 
-        # ------------------------------------------------
-        # Upload PDF to Supabase
-        # ------------------------------------------------
-
-        report_storage_path = upload_file(
-          report_path,
-          f"reports/{uuid4().hex}_{os.path.basename(report_path)}",
-         "application/pdf"
+        logger.info(
+            f"PDF generated: {report_path}"
         )
 
         # ------------------------------------------------
-        # Save prediction in database
+        # Upload PDF
         # ------------------------------------------------
+
+        logger.info(
+            "Uploading PDF to Supabase..."
+        )
+
+        report_storage_path = upload_file(
+            report_path,
+            f"reports/{os.path.basename(report_path)}",
+            "application/pdf"
+        )
+
+        logger.info(
+            f"PDF uploaded: {report_storage_path}"
+        )
+
+        # ------------------------------------------------
+        # Save database record
+        # ------------------------------------------------
+
+        logger.info(
+            "Saving prediction to database..."
+        )
 
         prediction_record = save_prediction(
             db=db,
-            filename=file.filename,
+            filename=safe_filename,
             predicted_class=prediction,
             confidence=confidence_percent,
             gradcam_path=gradcam_storage_path,
@@ -239,12 +296,17 @@ async def predict(
         )
 
         logger.info(
-            f"Prediction completed for {current_user}"
+            f"Database record saved: "
+            f"{prediction_record.id}"
         )
 
         # ------------------------------------------------
-        # Create signed URLs
+        # Signed URLs
         # ------------------------------------------------
+
+        logger.info(
+            "Creating signed URLs..."
+        )
 
         gradcam_url = create_signed_url(
             prediction_record.gradcam_path,
@@ -257,30 +319,31 @@ async def predict(
         )
 
         # ------------------------------------------------
-        # Remove temporary local files
+        # Cleanup
         # ------------------------------------------------
 
-        try:
+        logger.info(
+            "Cleaning temporary files..."
+        )
 
-            if os.path.exists(file_path):
-                os.remove(file_path)
+        for path in [
+            file_path,
+            gradcam_path,
+            report_path
+        ]:
+            try:
+                if path and os.path.exists(path):
+                    os.remove(path)
+            except Exception as cleanup_error:
+                logger.warning(
+                    f"Cleanup failed for {path}: "
+                    f"{cleanup_error}"
+                )
 
-            if os.path.exists(gradcam_path):
-                os.remove(gradcam_path)
-
-            if os.path.exists(report_path):
-                os.remove(report_path)
-
-        except Exception as cleanup_error:
-
-            logger.warning(
-                f"Temporary file cleanup failed: "
-                f"{cleanup_error}"
-            )
-
-        # ------------------------------------------------
-        # Response
-        # ------------------------------------------------
+        logger.info(
+            f"Prediction completed successfully "
+            f"for {current_user}"
+        )
 
         return {
             "prediction_id": prediction_record.id,
@@ -297,11 +360,22 @@ async def predict(
             "Prediction Error"
         )
 
+        # Cleanup even when an error occurs
+        for path in [
+            file_path,
+            gradcam_path,
+            report_path
+        ]:
+            try:
+                if path and os.path.exists(path):
+                    os.remove(path)
+            except Exception:
+                pass
+
         raise HTTPException(
             status_code=500,
             detail=f"Prediction failed: {str(e)}"
         )
-
 # ----------------------------------------------------
 # Prediction History
 # -----------------------------------------------
