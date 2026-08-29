@@ -159,7 +159,9 @@ async def predict(
         # Save uploaded MRI
         # ------------------------------------------------
 
-        safe_filename = os.path.basename(file.filename)
+        original_filename = os.path.basename(file.filename)
+
+        safe_filename = f"{uuid4().hex}_{original_filename}" 
 
         file_path = os.path.join(
             UPLOAD_FOLDER,
@@ -208,17 +210,9 @@ async def predict(
         # Grad-CAM
         # ------------------------------------------------
 
-        logger.info(
-            "Starting Grad-CAM generation..."
-        )
+        logger.info("Grad-CAM temporarily disabled for deployment testing.")
 
-        gradcam_path = explain_prediction(
-            file_path
-        )
-
-        logger.info(
-            f"Grad-CAM generated: {gradcam_path}"
-        )
+        gradcam_path = None
 
         # ------------------------------------------------
         # Upload Grad-CAM
@@ -228,7 +222,9 @@ async def predict(
             "Uploading Grad-CAM to Supabase..."
         )
 
-        gradcam_storage_path = upload_file(
+        gradcam_storage_path = None
+        if gradcam_path:
+          gradcam_storage_path = upload_file(
             gradcam_path,
             f"gradcam/{os.path.basename(gradcam_path)}",
             "image/jpeg"
@@ -308,10 +304,12 @@ async def predict(
             "Creating signed URLs..."
         )
 
-        gradcam_url = create_signed_url(
-            prediction_record.gradcam_path,
-            expires_in=3600
-        )
+        gradcam_url =  None
+        if prediction_record.gradcam_path:
+          gradcam_url = create_signed_url(
+              prediction_record.gradcam_path,
+              expires_in=3600
+    )
 
         report_url = create_signed_url(
             prediction_record.report_path,
