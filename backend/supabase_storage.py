@@ -19,6 +19,14 @@ SUPABASE_BUCKET = os.getenv(
 )
 print("SUPABASE_URL:", repr(os.getenv("SUPABASE_URL")))
 print("SUPABASE_BUCKET:", repr(os.getenv("SUPABASE_BUCKET")))
+import socket
+
+try:
+    hostname = SUPABASE_URL.replace("https://", "").split("/")[0]
+    print("Testing Supabase hostname:", hostname)
+    print("Resolved IP:", socket.gethostbyname(hostname))
+except Exception as e:
+    print("SUPABASE DNS ERROR:", repr(e))
 
 
 # ----------------------------------------------------
