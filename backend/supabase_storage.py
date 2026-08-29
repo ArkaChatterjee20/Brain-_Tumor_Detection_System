@@ -17,6 +17,8 @@ SUPABASE_BUCKET = os.getenv(
     "SUPABASE_BUCKET",
     "prediction-files"
 )
+print("SUPABASE_URL:", repr(os.getenv("SUPABASE_URL")))
+print("SUPABASE_BUCKET:", repr(os.getenv("SUPABASE_BUCKET")))
 
 
 # ----------------------------------------------------
