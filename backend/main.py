@@ -211,9 +211,20 @@ async def predict(
         # Grad-CAM
         # ------------------------------------------------
 
-        logger.info("Grad-CAM temporarily disabled for deployment testing.")
+        logger.info("Starting Grad-CAM generation...")
 
-        gradcam_path = None
+        gradcam_path = explain_prediction(
+           file_path
+        )
+
+        if gradcam_path:
+          logger.info(
+            f"Grad-CAM generated successfully: {gradcam_path}"
+        )
+        else:
+          logger.warning(
+            "Grad-CAM generation failed."
+        )
 
         # ------------------------------------------------
         # Upload Grad-CAM
