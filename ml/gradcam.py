@@ -100,6 +100,7 @@ def generate_gradcam(model, image, last_conv_layer_name=None):
     # --------------------------------------------------
     # 4. Create Grad-CAM model
     # --------------------------------------------------
+    print("Grad-CAM model creation started")
 
     grad_model = tf.keras.models.Model(
         inputs=model.inputs,
@@ -108,10 +109,12 @@ def generate_gradcam(model, image, last_conv_layer_name=None):
             model.output
         ]
     )
+    print("Grad-CAM model created successfully")
 
     # --------------------------------------------------
     # 5. Calculate gradients
     # --------------------------------------------------
+    print("Starting GradientTape...")
 
     with tf.GradientTape() as tape:
 
@@ -163,6 +166,7 @@ def generate_gradcam(model, image, last_conv_layer_name=None):
         class_channel,
         conv_outputs
     )
+    print("Gradient calculation finished")
 
     print(
         "Gradients calculated:",
