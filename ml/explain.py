@@ -7,7 +7,7 @@ from backend.predict import model
 from ml.gradcam import generate_gradcam
 
 
-LAST_CONV_LAYER = None
+LAST_CONV_LAYER = "conv2d_2"
 
 
 BASE_DIR = os.getcwd()
@@ -168,4 +168,4 @@ def explain_prediction(image_path):
 
         print("===================================")
 
-        return None
+        raise

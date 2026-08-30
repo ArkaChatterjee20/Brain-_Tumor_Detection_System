@@ -358,24 +358,24 @@ if st.session_state.prediction is not None:
         )
 
     with col2:
+      gradcam_url = st.session_state.get("gradcam_url")
+      if gradcam_url:
 
         try:
+            from io import BytesIO
 
-              headers = {
-                      "Authorization": f"Bearer {st.session_state.token}"
-                    }
+            response = requests.get(
+                gradcam_url,
+                timeout=(10, 120)
+            )
 
-              response = requests.get(
-                          st.session_state.gradcam_url,
-                          headers=headers,
-                          timeout = (10,120)
-                        )
+              
 
-              if response.status_code == 200:
+            if response.status_code == 200:
 
-                from io import BytesIO
-
-                image = Image.open(BytesIO(response.content))
+                image = Image.open(
+                    BytesIO(response.content)
+                )
 
                 st.image(
                   image,
@@ -383,13 +383,22 @@ if st.session_state.prediction is not None:
                   use_container_width=True
                 )
 
-              else:
+            else:
 
-                st.warning("Grad-CAM unavailable.")
+                st.warning(
+                    f"Grad-CAM unavailable "
+                    f"(HTTP {response.status_code})."
+                )
 
         except Exception as e:
 
-                st.warning(f"Grad-CAM unavailable.\n\n{e}")
+                st.warning(
+                   f"Unable to load Grad-CAM: {e}"
+                )
+      else:
+           st.info(
+              "Grad-CAM is not available for this prediction."
+           )
 
 # ==========================================================
 # PDF Report

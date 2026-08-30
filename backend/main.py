@@ -217,17 +217,34 @@ async def predict(
         gradcam_storage_path = None
 
         try:
-             gradcam_path = explain_prediction(file_path)
 
-             logger.info(
-               f"Grad-CAM generated successfully: {gradcam_path}"
-             )
+            gradcam_path = explain_prediction(file_path)
+
+            logger.info(
+              f"Grad-CAM returned path: {gradcam_path}"
+            )
+
+            if gradcam_path and os.path.exists(gradcam_path):
+
+                logger.info(
+                   f"Grad-CAM file exists: {gradcam_path}"
+                )
+
+            else:
+
+                logger.error(
+                  "Grad-CAM image was not created."
+                )
+
+                gradcam_path = None
 
         except Exception as e:
-             logger.exception(
+
+            logger.exception(
                 f"Grad-CAM generation failed: {e}"
             )
-             gradcam_path = None
+
+        gradcam_path = None
 
 
 # ------------------------------------------------
