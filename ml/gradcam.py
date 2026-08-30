@@ -2,120 +2,44 @@ import tensorflow as tf
 import numpy as np
 
 
-def generate_gradcam(model, image, last_conv_layer_name=None):
-    """
-    Generate Grad-CAM heatmap for a TensorFlow/Keras classification model.
+def generate_gradcam(model, image, last_conv_layer_name):
 
-    Parameters
-    ----------
-    model : tf.keras.Model
-        Loaded TensorFlow model.
-
-    image : np.ndarray
-        Preprocessed image with shape (1, 224, 224, 3).
-
-    last_conv_layer_name : str, optional
-        Name of the convolutional layer to use.
-        If None, the last 4D convolutional layer is detected automatically.
-
-    Returns
-    -------
-    np.ndarray
-        Normalized Grad-CAM heatmap.
-    """
-
-    # --------------------------------------------------
-    # 1. Validate input
-    # --------------------------------------------------
-
-    if model is None:
-        raise ValueError("TensorFlow model is None.")
-
-    if image is None:
-        raise ValueError("Input image is None.")
-
-    image = tf.convert_to_tensor(image, dtype=tf.float32)
-
-    if len(image.shape) != 4:
-        raise ValueError(
-            f"Expected image shape (batch, height, width, channels), "
-            f"got {image.shape}"
-        )
-
+    print("Generating Grad-CAM using layer:", last_conv_layer_name)
     print("Grad-CAM image shape:", image.shape)
 
     # --------------------------------------------------
-    # 2. Find convolutional layer
+    # Make sure the model is built/called
     # --------------------------------------------------
-
-    if last_conv_layer_name is not None:
-
-        try:
-            last_conv_layer = model.get_layer(
-                last_conv_layer_name
-            )
-
-            print(
-                "Using Grad-CAM layer:",
-                last_conv_layer.name
-            )
-
-        except Exception:
-
-            print(
-                f"Layer '{last_conv_layer_name}' not found."
-            )
-
-            last_conv_layer = None
-
-    else:
-        last_conv_layer = None
+    _ = model(image, training=False)
 
     # --------------------------------------------------
-    # 3. Automatically find last 4D layer if needed
+    # Find the requested convolution layer
     # --------------------------------------------------
-
-    if last_conv_layer is None:
-
-        for layer in reversed(model.layers):
-             if isinstance(layer, tf.keras.layers.Conv2D):
-    
-                last_conv_layer = layer
-
-                print(
-                "Automatically selected Grad-CAM layer:",
-                layer.name
-                )
-
-                break
-
-            
-
-    if last_conv_layer is None:
-
+    try:
+        last_conv_layer = model.get_layer(last_conv_layer_name)
+    except ValueError:
         raise ValueError(
-            "Could not find a suitable convolutional layer."
+            f"Layer '{last_conv_layer_name}' not found in model."
         )
 
-    # --------------------------------------------------
-    # 4. Create Grad-CAM model
-    # --------------------------------------------------
-    print("Grad-CAM model creation started")
+    print("Grad-CAM layer found:", last_conv_layer.name)
 
-    grad_model = tf.keras.models.Model(
+    # --------------------------------------------------
+    # Create Grad-CAM model
+    # --------------------------------------------------
+    grad_model = tf.keras.Model(
         inputs=model.inputs,
         outputs=[
             last_conv_layer.output,
-            model.output
+            model.outputs[0]
         ]
     )
-    print("Grad-CAM model created successfully")
+
+    print("Grad-CAM model creation successful")
 
     # --------------------------------------------------
-    # 5. Calculate gradients
+    # Calculate gradients
     # --------------------------------------------------
-    print("Starting GradientTape...")
-
     with tf.GradientTape() as tape:
 
         conv_outputs, predictions = grad_model(
@@ -123,139 +47,81 @@ def generate_gradcam(model, image, last_conv_layer_name=None):
             training=False
         )
 
-        # Handle list/tuple model outputs
-        if isinstance(predictions, (list, tuple)):
-            predictions = predictions[0]
+        # For binary/single-output model
+        if len(predictions.shape) == 1:
+            loss = predictions[0]
 
-        print(
-            "Prediction shape:",
-            predictions.shape
-        )
+        elif predictions.shape[-1] == 1:
+            loss = predictions[:, 0]
 
-        # Get predicted class
-        if len(predictions.shape) == 2:
-
+        else:
             pred_index = tf.argmax(
                 predictions[0]
             )
 
-            class_channel = predictions[
-                :, pred_index
-            ]
-
-        else:
-
-            pred_index = tf.argmax(
-                predictions
-            )
-
-            class_channel = predictions[
-                0, pred_index
-            ]
-
-        print(
-            "Grad-CAM predicted class:",
-            int(pred_index.numpy())
-        )
+            loss = predictions[:, pred_index]
 
     # --------------------------------------------------
-    # 6. Calculate gradients
+    # Calculate gradients
     # --------------------------------------------------
-
     grads = tape.gradient(
-        class_channel,
+        loss,
         conv_outputs
-    )
-    print("Gradient calculation finished")
-
-    print(
-        "Gradients calculated:",
-        grads is not None
     )
 
     if grads is None:
-
         raise ValueError(
             "Gradients are None. "
-            "Grad-CAM cannot be generated for this layer."
+            "Grad-CAM cannot be generated."
         )
 
-    # --------------------------------------------------
-    # 7. Global average pooling
-    # --------------------------------------------------
+    print("Gradients calculated successfully")
 
+    # --------------------------------------------------
+    # Global average pooling
+    # --------------------------------------------------
     pooled_grads = tf.reduce_mean(
         grads,
-        axis=(1, 2)
+        axis=(0, 1, 2)
     )
 
     # --------------------------------------------------
-    # 8. Remove batch dimension
+    # Remove batch dimension
     # --------------------------------------------------
-
     conv_outputs = conv_outputs[0]
 
-    pooled_grads = pooled_grads[0]
-
     # --------------------------------------------------
-    # 9. Create heatmap
+    # Weighted feature maps
     # --------------------------------------------------
-
     heatmap = tf.reduce_sum(
         conv_outputs * pooled_grads,
         axis=-1
     )
 
     # --------------------------------------------------
-    # 10. ReLU
+    # ReLU
     # --------------------------------------------------
-
     heatmap = tf.maximum(
         heatmap,
         0
     )
 
     # --------------------------------------------------
-    # 11. Normalize
+    # Normalize
     # --------------------------------------------------
-
     max_value = tf.reduce_max(
         heatmap
     )
-
-    if float(max_value.numpy()) <= 0:
-
-        raise ValueError(
-            "Grad-CAM heatmap is empty."
-        )
 
     heatmap = heatmap / (
         max_value + tf.keras.backend.epsilon()
     )
 
-    # --------------------------------------------------
-    # 12. Convert to NumPy
-    # --------------------------------------------------
-
     heatmap = heatmap.numpy()
 
     print(
-        "Grad-CAM generated successfully."
-    )
-
-    print(
-        "Heatmap shape:",
+        "Grad-CAM heatmap generated:",
         heatmap.shape
-    )
-
-    print(
-        "Heatmap min:",
-        float(np.min(heatmap))
-    )
-
-    print(
-        "Heatmap max:",
-        float(np.max(heatmap))
     )
 
     return heatmap
