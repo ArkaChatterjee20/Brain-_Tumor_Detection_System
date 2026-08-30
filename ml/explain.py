@@ -3,12 +3,11 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from backend.predict import model
 from ml.gradcam import generate_gradcam
+from backend.predict import model
 
 
 LAST_CONV_LAYER = "conv2d_2"
-
 
 BASE_DIR = os.getcwd()
 
@@ -22,7 +21,6 @@ os.makedirs(
     OUTPUT_DIR,
     exist_ok=True
 )
-
 
 print(
     "Grad-CAM will use the shared TensorFlow model."
@@ -59,7 +57,6 @@ def explain_prediction(image_path):
             axis=0
         )
 
-
         # ---------------------------------------------
         # Generate Grad-CAM
         # ---------------------------------------------
@@ -67,16 +64,16 @@ def explain_prediction(image_path):
         print(
             f"Generating Grad-CAM using layer: {LAST_CONV_LAYER}"
         )
+
         heatmap = generate_gradcam(
-          model,
-          input_image,
-          LAST_CONV_LAYER
+            model=model,
+            image=input_image,
+            last_conv_layer_name=LAST_CONV_LAYER
         )
+
         print(
-          "Grad-CAM heatmap generated successfully"
+            "Grad-CAM heatmap generated successfully"
         )
-
-
 
         # ---------------------------------------------
         # Load original image
@@ -97,7 +94,6 @@ def explain_prediction(image_path):
             (224, 224)
         )
 
-
         # ---------------------------------------------
         # Resize heatmap
         # ---------------------------------------------
@@ -111,7 +107,6 @@ def explain_prediction(image_path):
             255 * heatmap
         )
 
-
         # ---------------------------------------------
         # Apply color map
         # ---------------------------------------------
@@ -120,7 +115,6 @@ def explain_prediction(image_path):
             heatmap,
             cv2.COLORMAP_JET
         )
-
 
         # ---------------------------------------------
         # Overlay
@@ -133,7 +127,6 @@ def explain_prediction(image_path):
             0.4,
             0
         )
-
 
         # ---------------------------------------------
         # Save Grad-CAM
@@ -148,24 +141,41 @@ def explain_prediction(image_path):
             "gradcam_" + filename
         )
 
-        cv2.imwrite(
+        success = cv2.imwrite(
             output_path,
             overlay
         )
 
+        if not success:
+            raise ValueError(
+                "Failed to save Grad-CAM image."
+            )
+
+        print(
+            f"Grad-CAM saved successfully: {output_path}"
+        )
 
         return output_path
 
-
     except Exception as e:
 
-        print("========== GRADCAM ERROR ==========")
-        print(type(e).__name__)
-        print(str(e))
+        print(
+            "========== GRADCAM ERROR =========="
+        )
+
+        print(
+            type(e).__name__
+        )
+
+        print(
+            str(e)
+        )
 
         import traceback
         traceback.print_exc()
 
-        print("===================================")
+        print(
+            "==================================="
+        )
 
         raise
