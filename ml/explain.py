@@ -7,7 +7,7 @@ from backend.predict import model
 from ml.gradcam import generate_gradcam
 
 
-LAST_CONV_LAYER = "conv2d_2"
+LAST_CONV_LAYER = None
 
 
 BASE_DIR = os.getcwd()
@@ -64,11 +64,18 @@ def explain_prediction(image_path):
         # Generate Grad-CAM
         # ---------------------------------------------
 
-        heatmap = generate_gradcam(
-            model,
-            input_image,
-            LAST_CONV_LAYER
+        print(
+            f"Generating Grad-CAM using layer: {LAST_CONV_LAYER}"
         )
+        heatmap = generate_gradcam(
+          model,
+          input_image,
+          LAST_CONV_LAYER
+        )
+        print(
+          "Grad-CAM heatmap generated successfully"
+        )
+
 
 
         # ---------------------------------------------

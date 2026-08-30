@@ -98,6 +98,16 @@ model = tf.keras.models.load_model(
 )
 
 print("TensorFlow model loaded successfully.")
+print("========== MODEL LAYERS ==========")
+
+for layer in model.layers:
+    print(
+        layer.name,
+        layer.__class__.__name__,
+        layer.output.shape
+    )
+
+print("==================================")
 
 
 # ----------------------------------------------------
