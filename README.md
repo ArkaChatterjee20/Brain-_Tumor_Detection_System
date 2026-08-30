@@ -29,6 +29,23 @@ ________________________________________
           ▼
       Grad-CAM Heatmap
 ________________________________________
+🎥 Full Project Demo
+
+[![Brain Tumor Detection System Demo](https://img.youtube.com/vi/KXy5cVSACr8/maxresdefault.jpg)](https://youtu.be/KXy5cVSACr8)
+
+**▶️ Click the thumbnail above to watch the full project demo.**
+
+### Demo Includes
+•	🧠 Brain MRI image classification
+•	🤖 TensorFlow deep learning model
+•	⚡ FastAPI backend
+•	📖 Swagger API documentation
+•	🖥️ Streamlit frontend
+•	🔐 User authentication
+•	📊 Prediction and confidence score
+•	🔥 Grad-CAM explainability
+•	🗄 MySQL database integration
+________________________________________
 🛠 Technology Stack
 Frontend
 •	Streamlit
@@ -128,7 +145,7 @@ Login Page
 
 ________________________________________
 Prediction Result
- <img width="803" height="507" alt="image" src="https://github.com/user-attachments/assets/e79c8093-403c-4dc3-80d2-ce6eaa648e34" />
+ <img width="803" height="507" alt="image" src="https://github.com/user-attachments/assets/e79c8093-403c-4dc8-80d2-ce6eaa648e34" />
 
 ________________________________________
 Grad-CAM
