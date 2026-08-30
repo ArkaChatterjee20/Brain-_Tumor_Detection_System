@@ -78,24 +78,18 @@ def generate_gradcam(model, image, last_conv_layer_name=None):
     if last_conv_layer is None:
 
         for layer in reversed(model.layers):
+             if isinstance(layer, tf.keras.layers.Conv2D):
+    
+                last_conv_layer = layer
 
-            try:
+                print(
+                "Automatically selected Grad-CAM layer:",
+                layer.name
+                )
 
-                output_shape = layer.output.shape
+                break
 
-                if len(output_shape) == 4:
-
-                    last_conv_layer = layer
-
-                    print(
-                        "Automatically selected Grad-CAM layer:",
-                        layer.name
-                    )
-
-                    break
-
-            except Exception:
-                continue
+            
 
     if last_conv_layer is None:
 
