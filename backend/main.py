@@ -244,7 +244,7 @@ async def predict(
                 f"Grad-CAM generation failed: {e}"
             )
 
-        gradcam_path = None
+        
 
 
 # ------------------------------------------------
