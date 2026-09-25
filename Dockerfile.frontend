@@ -16,5 +16,4 @@ RUN pip install --default-timeout=1000 --retries 20 --no-cache-dir -r requiremen
 COPY . .
 
 EXPOSE 8501
-
-CMD ["sh", "-c", "streamlit run frontend/streamlit_app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true --server.fileWatcherType=none"]
+CMD ["streamlit", "run", "frontend/streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true", "--server.fileWatcherType=none"]
