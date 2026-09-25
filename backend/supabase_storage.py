@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv
 from supabase import create_client
-
+import time
 
 # ----------------------------------------------------
 # Load Environment Variables
@@ -111,82 +111,80 @@ def create_signed_url(
     storage_path,
     expires_in=3600
 ):
-
     if not storage_path:
-
-        print(
-            "WARNING: Empty Supabase storage path."
-        )
-
+        print("WARNING: Empty Supabase storage path.")
         return None
 
-    print(
-        "Creating signed URL for:",
-        storage_path
-    )
+    print("Creating signed URL for:", storage_path)
 
-    response = (
-        supabase.storage
-        .from_(SUPABASE_BUCKET)
-        .create_signed_url(
-            storage_path,
-            expires_in
-        )
-    )
+    last_error = None
 
-    print(
-        "SUPABASE SIGNED URL RESPONSE:",
-        response
-    )
+    for attempt in range(1, 4):
+        try:
+            response = (
+                supabase.storage
+                .from_(SUPABASE_BUCKET)
+                .create_signed_url(
+                    storage_path,
+                    expires_in
+                )
+            )
 
+            print(
+                f"SUPABASE SIGNED URL RESPONSE "
+                f"(attempt {attempt}):",
+                response
+            )
 
-    # ------------------------------------------------
-    # Dictionary response
-    # ------------------------------------------------
+            if isinstance(response, dict):
 
-    if isinstance(response, dict):
+                if response.get("signedURL"):
+                    return response["signedURL"]
 
-        if response.get("signedURL"):
-            return response["signedURL"]
+                if response.get("signedUrl"):
+                    return response["signedUrl"]
 
-        if response.get("signedUrl"):
-            return response["signedUrl"]
+                if response.get("signed_url"):
+                    return response["signed_url"]
 
-        if response.get("signed_url"):
-            return response["signed_url"]
+                data = response.get("data")
 
+                if isinstance(data, dict):
 
-        data = response.get("data")
+                    if data.get("signedURL"):
+                        return data["signedURL"]
 
-        if isinstance(data, dict):
+                    if data.get("signedUrl"):
+                        return data["signedUrl"]
 
-            if data.get("signedURL"):
-                return data["signedURL"]
+                    if data.get("signed_url"):
+                        return data["signed_url"]
 
-            if data.get("signedUrl"):
-                return data["signedUrl"]
+            if hasattr(response, "signed_url"):
+                return response.signed_url
 
-            if data.get("signed_url"):
-                return data["signed_url"]
+            if hasattr(response, "signedURL"):
+                return response.signedURL
 
+            if hasattr(response, "signedUrl"):
+                return response.signedUrl
 
-    # ------------------------------------------------
-    # Object response
-    # ------------------------------------------------
+            raise RuntimeError(
+                f"Unable to create signed URL: {response}"
+            )
 
-    if hasattr(response, "signed_url"):
+        except Exception as e:
+            last_error = e
 
-        return response.signed_url
+            print(
+                f"Supabase signed URL attempt "
+                f"{attempt}/3 failed: {repr(e)}"
+            )
 
-    if hasattr(response, "signedURL"):
-
-        return response.signedURL
-
-    if hasattr(response, "signedUrl"):
-
-        return response.signedUrl
-
+            if attempt < 3:
+                time.sleep(2)
 
     raise RuntimeError(
-        f"Unable to create signed URL: {response}"
+        f"Unable to create signed URL after 3 attempts: "
+        f"{last_error}"
     )
