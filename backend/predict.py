@@ -96,6 +96,10 @@ model = tf.keras.models.load_model(
     MODEL_PATH,
     compile=False
 )
+# Initialize the model once so Keras has a defined computational graph
+dummy_input = tf.zeros((1, 224, 224, 3), dtype=tf.float32)
+model(dummy_input, training=False)
+del dummy_input
 
 print("TensorFlow model loaded successfully.")
 print("========== MODEL LAYERS ==========")
