@@ -31,7 +31,7 @@ ________________________________________
 ________________________________________
 🎥 Full Project Demo
 
-[![Brain Tumor Detection System Demo](https://img.youtube.com/vi/KXy5cVSACr8/maxresdefault.jpg)](https://youtu.be/KXy5cVSACr8)
+http://16.4.23.159:8501/
 
 **▶️ Click the thumbnail above to watch the full project demo.**
 
